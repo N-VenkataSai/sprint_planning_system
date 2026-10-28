@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SprintAlloc - Sprint Planning &amp; Intelligent Resource Allocation</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container" style="max-width: 1080px; padding-top: 2rem; padding-bottom: 3rem;">
+
+    <!-- Brand Header -->
+    <header style="text-align: center; margin-bottom: 2rem;">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: #fff; font-size: 1.75rem; border-radius: var(--radius-xl); box-shadow: var(--shadow-md); margin-bottom: 0.75rem;">
+        ⚡
+      </div>
+      <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--slate-900); letter-spacing: -0.025em; margin-bottom: 0.5rem;">
+        Sprint Planning &amp; Intelligent Resource Allocation
+      </h1>
+      <p style="font-size: 1.0625rem; color: var(--text-muted); max-width: 680px; margin: 0 auto;">
+        Agile project management, transparent developer capacity balancing, and deadline risk monitoring powered exclusively by user-entered records.
+      </p>
+    </header>
+
+    <!-- Initial Setup Container (Shown when NO Administrator is registered) -->
+    <section id="first-admin-setup-card" class="card" style="display: none; max-width: 600px; margin: 0 auto 2.5rem; border-top: 4px solid var(--purple); box-shadow: var(--shadow-lg);">
+      <div style="text-align: center; margin-bottom: 1.25rem;">
+        <span style="font-size: 2.25rem;">👑</span>
+        <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--slate-900); margin-top: 0.25rem;">
+          Initial Setup: Register Administrator
+        </h2>
+        <p style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 0.25rem;">
+          The system starts 100% empty with zero pre-loaded business data. Complete this step to establish your administrative workspace account.
+        </p>
+      </div>
+
+      <form id="first-admin-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label form-label-required" for="setup-admin-name">Full Name</label>
+            <input type="text" id="setup-admin-name" class="form-control" placeholder="e.g. Maya Lin" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required" for="setup-admin-email">Email Address</label>
+            <input type="email" id="setup-admin-email" class="form-control" placeholder="e.g. admin@enterprise.io" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="setup-admin-title">Job Title</label>
+            <input type="text" id="setup-admin-title" class="form-control" placeholder="e.g. Director of Engineering" value="System Administrator">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setup-admin-capacity">Weekly Work Hours</label>
+            <input type="number" id="setup-admin-capacity" class="form-control" value="40" min="10" max="60">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="background-color: var(--purple); border-color: var(--purple); width: 100%; margin-top: 0.5rem;">
+          🚀 Register Initial Administrator &amp; Open Workspace
+        </button>
+      </form>
+    </section>
+
+    <!-- Role Access Container (Shown when Users Exist) -->
+    <div id="role-login-section" style="display: none;">
+
+      <h2 style="font-size: 1.125rem; font-weight: 700; color: var(--slate-800); margin-bottom: 1.25rem; text-align: center;">
+        Select Role to Enter Workspace
+      </h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+
+        <!-- 1. Administrator Portal Card -->
+        <div class="card" style="display: flex; flex-direction: column; border-top: 4px solid var(--purple);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <span style="font-size: 2rem;">👑</span>
+            <span class="user-role-tag role-admin" style="border: 1px solid currentColor; padding: 0.2rem 0.5rem; border-radius: var(--radius-sm);">ADMINISTRATOR</span>
+          </div>
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.25rem;">
+            Administrator Access
+          </h3>
+          <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Project governance, team provisioning, and organization-wide metrics.
+          </p>
+
+          <div id="admin-user-selector-wrap" class="form-group" style="flex: 1;">
+            <label class="form-label" for="admin-user-select">Select Administrator Profile:</label>
+            <select id="admin-user-select" class="form-control"></select>
+          </div>
+
+          <button id="btn-enter-admin" class="btn btn-primary" style="background-color: var(--purple); border-color: var(--purple); width: 100%;">
+            Enter as Administrator &rarr;
+          </button>
+        </div>
+
+        <!-- 2. Project Manager Portal Card -->
+        <div class="card" style="display: flex; flex-direction: column; border-top: 4px solid var(--primary);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <span style="font-size: 2rem;">👔</span>
+            <span class="user-role-tag role-manager" style="border: 1px solid currentColor; padding: 0.2rem 0.5rem; border-radius: var(--radius-sm);">PROJECT MANAGER</span>
+          </div>
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.25rem;">
+            Project Manager Access
+          </h3>
+          <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Sprint planning, task allocation, developer matching, and deadline monitoring.
+          </p>
+
+          <div id="pm-user-selector-wrap" class="form-group" style="flex: 1;">
+            <label class="form-label" for="pm-user-select">Select Project Manager Profile:</label>
+            <select id="pm-user-select" class="form-control"></select>
+          </div>
+
+          <button id="btn-enter-pm" class="btn btn-primary" style="width: 100%;">
+            Enter as Project Manager &rarr;
+          </button>
+        </div>
+
+        <!-- 3. Developer Portal Card -->
+        <div class="card" style="display: flex; flex-direction: column; border-top: 4px solid var(--success);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <span style="font-size: 2rem;">💻</span>
+            <span class="user-role-tag role-developer" style="border: 1px solid currentColor; padding: 0.2rem 0.5rem; border-radius: var(--radius-sm);">DEVELOPER</span>
+          </div>
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.25rem;">
+            Developer Access
+          </h3>
+          <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Assigned project tasks, actual effort tracking, and personal progress updates.
+          </p>
+
+          <div id="dev-user-selector-wrap" class="form-group" style="flex: 1;">
+            <label class="form-label" for="dev-user-select">Select Developer Profile:</label>
+            <select id="dev-user-select" class="form-control"></select>
+          </div>
+
+          <button id="btn-enter-dev" class="btn btn-success" style="width: 100%;">
+            Enter as Developer &rarr;
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Direct Project ID Access Box -->
+      <section class="card" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 1.5rem;">
+        <h3 style="font-size: 1.0625rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.35rem;">
+          🔍 Authorized Project ID Direct Jump
+        </h3>
+        <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Enter an authorized Project ID to directly open its dashboard:
+        </p>
+        <form id="project-jump-form" style="display: flex; gap: 0.5rem; justify-content: center; max-width: 420px; margin: 0 auto;">
+          <input type="text" id="project-jump-input" class="form-control" placeholder="Enter Project ID (e.g. PRJ-001)" style="font-weight: 600; text-transform: uppercase;" required>
+          <button type="submit" class="btn btn-primary">Open</button>
+        </form>
+      </section>
+
+    </div>
+
+    <!-- Data Policy Disclaimer Note -->
+    <div style="margin-top: 3rem; text-align: center; font-size: 0.8125rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+      <p>🛡️ <strong>Zero Sample Data Policy:</strong> This application does not inject mock data or pre-populated projects. All records are created and owned by you.</p>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>Client-Side Frontend Phase | User-Controlled LocalStorage</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const storage = window.storageManager;
+      const auth = window.authManager;
+
+      auth.renderNavbar('login');
+
+      const allUsers = storage.getUsers();
+      const adminUsers = allUsers.filter(u => u.role === 'admin');
+      const pmUsers = allUsers.filter(u => u.role === 'manager');
+      const devUsers = allUsers.filter(u => u.role === 'developer');
+
+      const setupCard = document.getElementById('first-admin-setup-card');
+      const loginSection = document.getElementById('role-login-section');
+
+      if (adminUsers.length === 0) {
+        // First Launch: Show setup form
+        setupCard.style.display = 'block';
+        loginSection.style.display = 'none';
+      } else {
+        // Users exist: Show login role cards
+        setupCard.style.display = 'none';
+        loginSection.style.display = 'block';
+
+        // Populate Admin dropdown
+        const adminSelect = document.getElementById('admin-user-select');
+        adminSelect.innerHTML = adminUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+
+        // Populate PM dropdown
+        const pmSelect = document.getElementById('pm-user-select');
+        if (pmUsers.length > 0) {
+          pmSelect.innerHTML = pmUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+        } else {
+          pmSelect.innerHTML = `<option value="">No PM accounts registered yet</option>`;
+          document.getElementById('btn-enter-pm').disabled = true;
+        }
+
+        // Populate Dev dropdown
+        const devSelect = document.getElementById('dev-user-select');
+        if (devUsers.length > 0) {
+          devSelect.innerHTML = devUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+        } else {
+          devSelect.innerHTML = `<option value="">No developer accounts registered yet</option>`;
+          document.getElementById('btn-enter-dev').disabled = true;
+        }
+      }
+
+      // First admin form submission
+      document.getElementById('first-admin-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('setup-admin-name').value;
+        const email = document.getElementById('setup-admin-email').value;
+        const title = document.getElementById('setup-admin-title').value;
+        const cap = document.getElementById('setup-admin-capacity').value;
+
+        const res = storage.registerFirstAdmin(name, email, title, [], cap);
+        if (res.success) {
+          auth.showToast(`Administrator account created for ${res.user.name}!`, 'success');
+          setTimeout(() => {
+            window.location.href = 'admin.html';
+          }, 500);
+        } else {
+          auth.showToast(res.error, 'danger');
+        }
+      });
+
+      // Role enter handlers
+      document.getElementById('btn-enter-admin')?.addEventListener('click', () => {
+        const userId = document.getElementById('admin-user-select').value;
+        if (userId && auth.login(userId)) {
+          window.location.href = 'admin.html';
+        }
+      });
+
+      document.getElementById('btn-enter-pm')?.addEventListener('click', () => {
+        const userId = document.getElementById('pm-user-select').value;
+        if (userId && auth.login(userId)) {
+          window.location.href = 'manager.html';
+        }
+      });
+
+      document.getElementById('btn-enter-dev')?.addEventListener('click', () => {
+        const userId = document.getElementById('dev-user-select').value;
+        if (userId && auth.login(userId)) {
+          window.location.href = 'developer.html';
+        }
+      });
+
+      // Direct project jump
+      document.getElementById('project-jump-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const inputId = document.getElementById('project-jump-input').value.trim().toUpperCase();
+        const project = storage.getProjectById(inputId);
+        if (project) {
+          storage.setActiveProject(project.id);
+          const currentUser = auth.getCurrentUser();
+          if (currentUser && currentUser.role === 'developer') {
+            window.location.href = `developer.html?projectId=${project.id}`;
+          } else {
+            window.location.href = `manager.html?projectId=${project.id}`;
+          }
+        } else {
+          auth.showToast(`Project ID "${inputId}" does not exist in records.`, 'danger');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Manager Dashboard - SprintAlloc</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- PM Page Header & Project Picker -->
+    <header class="page-header">
+      <div class="page-title-group">
+        <h1>👔 Project Manager Dashboard</h1>
+        <p class="page-subtitle">Sprint scope management, intelligent resource allocation, and deadline risk monitoring</p>
+      </div>
+
+      <!-- Authorized Project ID Selector / Direct Entry -->
+      <div class="page-actions">
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: #fff; padding: 0.35rem 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">Active Project:</span>
+          <select id="pm-project-select" class="nav-select" style="min-width: 180px;"></select>
+        </div>
+
+        <form id="manual-project-lookup-form" style="display: flex; gap: 0.35rem;">
+          <input type="text" id="manual-project-id-input" class="form-control" placeholder="Enter ID (e.g. PRJ-101)" style="width: 160px; padding: 0.4rem 0.6rem; font-size: 0.75rem; text-transform: uppercase;">
+          <button type="submit" class="btn btn-sm btn-secondary">Switch</button>
+        </form>
+
+        <a href="create-task.html" id="btn-goto-new-task" class="btn btn-primary">➕ New Task</a>
+      </div>
+    </header>
+
+    <div id="pm-main-content">
+
+      <!-- Active Project Overview Banner Card -->
+      <section class="card" style="margin-bottom: 1.5rem; border-top: 4px solid var(--primary);">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+              <span class="task-id" id="pm-project-id-badge" style="font-size: 0.875rem;">PRJ-101</span>
+              <span class="badge badge-active" id="pm-project-category">Cloud Infrastructure</span>
+              <span style="font-size: 0.8125rem; color: var(--text-muted);" id="pm-project-dates"></span>
+              <span style="color: var(--slate-300);">•</span>
+              <span style="font-size: 0.8125rem; color: var(--text-muted);">Lead PM: <strong id="pm-project-manager-name"></strong></span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--slate-900);" id="pm-project-name">
+              Project Name
+            </h2>
+            <p style="font-size: 0.875rem; color: var(--slate-600); margin-top: 0.25rem; max-width: 800px;" id="pm-project-desc">
+              Project description...
+            </p>
+          </div>
+
+          <!-- Project Actions -->
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="sprint-planning.html" id="btn-goto-sprint-plan" class="btn btn-primary">
+              🎯 Plan Sprints
+            </a>
+            <a href="analytics.html" id="btn-goto-analytics" class="btn btn-secondary">
+              📈 Analytics
+            </a>
+          </div>
+        </div>
+
+        <!-- Project Progress Bar -->
+        <div style="padding-top: 0.75rem; border-top: 1px solid var(--border-subtle);">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; margin-bottom: 0.35rem;">
+            <span>Project Completion (Story Points)</span>
+            <strong id="pm-project-progress-text">0%</strong>
+          </div>
+          <div class="progress-bar-container" style="height: 0.75rem;">
+            <div class="progress-bar-fill success" id="pm-project-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPI Metrics Grid -->
+      <section class="metrics-grid">
+        <div class="metric-card primary">
+          <div class="metric-info">
+            <span class="metric-label">Active Sprint</span>
+            <span class="metric-value" id="pm-metric-sprint-pts">0 SP</span>
+            <span class="metric-sub" id="pm-metric-sub-sprint">Sprint capacity</span>
+          </div>
+          <div class="metric-icon-wrap primary">🎯</div>
+        </div>
+
+        <div class="metric-card danger" id="pm-card-overdue">
+          <div class="metric-info">
+            <span class="metric-label">Overdue Tasks</span>
+            <span class="metric-value" id="pm-metric-overdue">0</span>
+            <span class="metric-sub">Requires urgent attention</span>
+          </div>
+          <div class="metric-icon-wrap danger">⚠️</div>
+        </div>
+
+        <div class="metric-card warning" id="pm-card-highrisk">
+          <div class="metric-info">
+            <span class="metric-label">High Deadline Risk</span>
+            <span class="metric-value" id="pm-metric-highrisk">0</span>
+            <span class="metric-sub">Tight schedule buffer</span>
+          </div>
+          <div class="metric-icon-wrap warning">⏱️</div>
+        </div>
+
+        <div class="metric-card success">
+          <div class="metric-info">
+            <span class="metric-label">Team Capacity Load</span>
+            <span class="metric-value" id="pm-metric-utilization">0%</span>
+            <span class="metric-sub" id="pm-metric-sub-utilization">0h / 0h assigned</span>
+          </div>
+          <div class="metric-icon-wrap success">⚖️</div>
+        </div>
+      </section>
+
+      <!-- Urgent Attention & Risk Explainer Section -->
+      <section class="card" style="margin-bottom: 1.75rem;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">🚨 Deadline Risk &amp; Attention Center</h2>
+            <p class="card-description">Deterministic risk scoring: Remaining effort hours vs available work days before deadline</p>
+          </div>
+        </div>
+        <div id="risk-alerts-container">
+          <!-- Dynamic Risk Alerts -->
+        </div>
+      </section>
+
+      <!-- Split Layout: Sprints & Team Allocation -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 1.75rem;">
+
+        <!-- Active & Planned Sprints -->
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">🏃 Project Sprints</h2>
+              <p class="card-description">Sprint cycles, capacity targets, and status</p>
+            </div>
+            <a href="sprint-planning.html" class="btn btn-sm btn-secondary">+ Plan</a>
+          </div>
+          <div id="sprints-list-container">
+            <!-- Dynamic Sprints -->
+          </div>
+        </section>
+
+        <!-- Team Allocation & Workload Balancer -->
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">⚖️ Developer Workload Balance</h2>
+              <p class="card-description">Live developer capacity meters in this sprint. Warns when limit (> 100%) is exceeded.</p>
+            </div>
+          </div>
+          <div id="team-allocation-container">
+            <!-- Dynamic Dev Capacity Meters -->
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Project Tasks & Backlog Table -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">📋 Project Tasks &amp; Sprint Backlog</h2>
+            <p class="card-description">Full list of tasks with inline status updates, skill tags, priority, and assignees</p>
+          </div>
+          <a href="create-task.html" class="btn btn-sm btn-primary">➕ New Task</a>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="pm-task-search" class="search-input" placeholder="Search tasks by title, skill, or ID...">
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Status:</span>
+            <select id="pm-task-filter-status" class="form-control" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.8125rem;">
+              <option value="all">All Statuses</option>
+              <option value="To Do">To Do</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Code Review">Code Review</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Task ID</th>
+                <th>Task Title &amp; Skills</th>
+                <th>Status (Quick Update)</th>
+                <th>Priority</th>
+                <th>Deadline Risk</th>
+                <th>Assignee</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pm-tasks-table-body">
+              <!-- Dynamic Task Rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>Client-Side Frontend Demonstration | LocalStorage Persistent</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/manager.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.managerController.init();
+    });
+  </script>
+</body>
+</html>

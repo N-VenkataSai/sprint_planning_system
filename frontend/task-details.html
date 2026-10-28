@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Details &amp; Effort Tracking - SprintAlloc</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container" id="task-details-main">
+
+    <!-- Page Header & Actions -->
+    <header class="page-header">
+      <div class="page-title-group">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span class="task-id" id="task-badge-id" style="font-size: 0.9375rem;">TSK-101</span>
+          <span style="font-size: 0.8125rem; color: var(--text-muted);" id="task-project-name">Project Name</span>
+          <span style="color: var(--slate-300);">•</span>
+          <span style="font-size: 0.8125rem; color: var(--text-muted);" id="task-sprint-name">Sprint 14</span>
+        </div>
+        <h1 id="task-title" style="font-size: 1.6rem; font-weight: 800; color: var(--slate-900);">Task Title</h1>
+      </div>
+
+      <div class="page-actions">
+        <a href="manager.html" class="btn btn-secondary">← Back to Dashboard</a>
+        <a href="#" id="btn-edit-task" class="btn btn-primary">✏️ Edit Task</a>
+        <button type="button" id="btn-delete-task" class="btn btn-outline-danger">🗑️ Delete</button>
+      </div>
+    </header>
+
+    <!-- Two-Column Layout -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; align-items: start;">
+
+      <!-- Left Column: Description, Skills, and Effort Log -->
+      <div>
+
+        <!-- Description Card -->
+        <section class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h2 class="card-title">📄 Description &amp; Acceptance Criteria</h2>
+          </div>
+          <p id="task-description" style="font-size: 0.9375rem; color: var(--slate-700); line-height: 1.6; white-space: pre-wrap; margin-bottom: 1.25rem;">
+            Loading task description...
+          </p>
+
+          <div style="border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <div style="font-size: 0.8125rem; font-weight: 600; color: var(--slate-700); margin-bottom: 0.5rem;">
+              Required Technical Skills:
+            </div>
+            <div class="skill-tags-list" id="task-skills-container"></div>
+          </div>
+        </section>
+
+        <!-- Effort Tracking & Work Logging Card -->
+        <section class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">⏱️ Actual Effort Tracking</h2>
+              <p class="card-description">Track real hours spent and maintain work progress transparency</p>
+            </div>
+          </div>
+
+          <!-- Effort Progress Bar -->
+          <div style="margin-bottom: 1.5rem; background-color: var(--slate-50); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+              <span>Effort Consumed</span>
+              <strong id="effort-ratio-text">0h logged / 0h estimated (0%)</strong>
+            </div>
+            <div class="progress-bar-container" style="height: 0.75rem;">
+              <div class="progress-bar-fill success" id="effort-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- Log Effort Form -->
+          <form id="log-effort-form" style="background-color: var(--slate-50); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem;">
+            <div style="font-size: 0.875rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.75rem;">
+              ➕ Log New Work Session
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label class="form-label form-label-required" for="log-hours">Hours Spent</label>
+                <input type="number" step="0.5" min="0.5" max="24" id="log-hours" class="form-control" placeholder="e.g. 4" required>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label class="form-label form-label-required" for="log-date">Date Worked</label>
+                <input type="date" id="log-date" class="form-control" required>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <label class="form-label" for="log-note">Activity Note / Deliverables</label>
+              <input type="text" id="log-note" class="form-control" placeholder="e.g. Finished Dockerfile multi-stage build, verified image size reduced by 60%">
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-primary">Save Effort Session</button>
+          </form>
+
+          <!-- History Table -->
+          <div style="font-size: 0.875rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.5rem;">
+            Work Log History
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Hours Logged</th>
+                  <th>Activity Description</th>
+                  <th>Logged By</th>
+                </tr>
+              </thead>
+              <tbody id="worklogs-table-body">
+                <!-- Dynamic Log Rows -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Right Column: Status, Assignee, and Risk Explainer -->
+      <aside>
+
+        <!-- Status & Properties Card -->
+        <section class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title" style="font-size: 1rem;">📌 Task State &amp; Metrics</h3>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="task-status-select">Current Status</label>
+            <select id="task-status-select" class="form-control" style="font-weight: 600;">
+              <option value="To Do">To Do</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Code Review">Code Review</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+            <span id="task-priority-badge" class="badge badge-priority-high">High Priority</span>
+            <span id="task-points-badge" class="task-points-badge">5 Story Points</span>
+          </div>
+        </section>
+
+        <!-- Assignee Card -->
+        <section class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title" style="font-size: 1rem;">👤 Assigned Developer</h3>
+          </div>
+          <div id="task-assignee-card">
+            <!-- Dynamic Assignee Details -->
+          </div>
+        </section>
+
+        <!-- Deadline & Explainable Risk Card -->
+        <section class="card">
+          <div class="card-header">
+            <h3 class="card-title" style="font-size: 1rem;">⏱️ Deadline Risk Assessment</h3>
+            <span id="task-risk-badge" class="badge badge-risk-low">On Track</span>
+          </div>
+
+          <div style="font-size: 0.8125rem; color: var(--slate-700); margin-bottom: 0.75rem;">
+            Deadline: <strong id="task-deadline-text">2026-10-30</strong>
+          </div>
+
+          <div class="alert alert-info" style="font-size: 0.75rem; margin-bottom: 0.75rem; line-height: 1.4;">
+            <strong style="color: var(--primary);">📐 Transparent Rule Formula:</strong>
+            <div class="risk-formula-box">
+              Hrem = max(0, Estimated - Actual)<br>
+              Havail = DaysRemaining &times; 6h/day<br>
+              If Today &gt; Deadline &rarr; OVERDUE<br>
+              If Hrem &gt; Havail &rarr; HIGH RISK
+            </div>
+            <div id="task-risk-reason" style="margin-top: 0.25rem; color: var(--slate-800);">
+              Analyzing schedule buffer...
+            </div>
+          </div>
+        </section>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>Client-Side Frontend Demonstration | LocalStorage Persistent</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/tasks.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.tasksController.initDetailsPage();
+    });
+  </script>
+</body>
+</html>

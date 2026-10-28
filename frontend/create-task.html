@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create / Edit Task - SprintAlloc</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Page Header -->
+    <header class="page-header">
+      <div class="page-title-group">
+        <h1 id="page-heading">➕ Create New Task</h1>
+        <p class="page-subtitle" id="page-subheading">Define task requirements, estimated hours, required skills, and utilize intelligent developer matching</p>
+      </div>
+      <div class="page-actions">
+        <a href="manager.html" class="btn btn-secondary">← Cancel &amp; Return</a>
+      </div>
+    </header>
+
+    <!-- Two-Column Layout: Form & Intelligent Allocation Panel -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+
+      <!-- Task Form -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">📝 Task Specifications</h2>
+        </div>
+
+        <form id="task-form">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="task-id">Task ID</label>
+              <input type="text" id="task-id" class="form-control" style="font-family: monospace; font-weight: 700;" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="task-project">Project</label>
+              <select id="task-project" class="form-control" required></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label form-label-required" for="task-title">Task Title</label>
+            <input type="text" id="task-title" class="form-control" placeholder="e.g. Implement AWS DynamoDB Session Cache Handler" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="task-desc">Task Description &amp; Acceptance Criteria</label>
+            <textarea id="task-desc" class="form-control" rows="3" placeholder="Specify technical requirements, expected inputs/outputs, and edge cases..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="task-sprint">Sprint Assignment</label>
+              <select id="task-sprint" class="form-control">
+                <option value="">📁 Backlog (No Sprint)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="task-type">Task Type</label>
+              <select id="task-type" class="form-control" required>
+                <option value="Feature" selected>Feature</option>
+                <option value="Bug">Bug</option>
+                <option value="Task">Task</option>
+                <option value="Improvement">Improvement</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="task-priority">Priority</label>
+              <select id="task-priority" class="form-control" required>
+                <option value="Urgent">Urgent</option>
+                <option value="High" selected>High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="task-status">Status</label>
+              <select id="task-status" class="form-control" required>
+                <option value="To Do" selected>To Do</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Code Review">Code Review</option>
+                <option value="Done">Done</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="task-story-points">Story Points (Fibonacci)</label>
+              <select id="task-story-points" class="form-control" required>
+                <option value="1">1 Point (Trivial)</option>
+                <option value="2">2 Points (Simple)</option>
+                <option value="3">3 Points (Moderate)</option>
+                <option value="5" selected>5 Points (Standard Feature)</option>
+                <option value="8">8 Points (Complex)</option>
+                <option value="13">13 Points (High Complexity)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="task-est-hours">Estimated Effort (Hours)</label>
+              <input type="number" id="task-est-hours" class="form-control" value="8" min="1" max="120" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="task-deadline">Deadline Date</label>
+              <input type="date" id="task-deadline" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- Required Skills Tags Selector -->
+          <div class="form-group" style="margin-top: 1rem; background-color: var(--slate-50); padding: 0.875rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <label class="form-label form-label-required">Required Developer Skills</label>
+            <span class="form-text" style="margin-bottom: 0.5rem; display: block;">
+              These tags drive the intelligent matching engine to recommend the most qualified available developers:
+            </span>
+
+            <!-- Active Tags List -->
+            <div id="active-skills-container" class="skill-tags-list" style="margin-bottom: 0.75rem; min-height: 2rem;"></div>
+
+            <!-- Clickable Suggestions -->
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem; font-weight: 600;">Click to add common skills:</div>
+            <div id="skill-suggestions-container" class="skill-tags-list" style="margin-bottom: 0.75rem;"></div>
+
+            <!-- Custom skill add -->
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="custom-skill-input" class="form-control" placeholder="Or type custom skill (e.g. GraphQL, Redis)..." style="font-size: 0.8125rem;">
+              <button type="button" id="btn-add-custom-skill" class="btn btn-sm btn-secondary">+ Add Tag</button>
+            </div>
+          </div>
+
+          <!-- Selected Assignee -->
+          <div class="form-group">
+            <label class="form-label" for="task-assignee">Assigned Developer</label>
+            <select id="task-assignee" class="form-control">
+              <option value="">👤 Unassigned</option>
+            </select>
+            <span class="form-text">You can select directly or click "👉 Assign" from the recommendation panel on the right.</span>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            <a href="manager.html" class="btn btn-secondary">Cancel</a>
+            <button type="submit" id="submit-btn" class="btn btn-primary">🚀 Save Task</button>
+          </div>
+
+        </form>
+      </section>
+
+      <!-- Intelligent Resource Allocation Panel -->
+      <section class="card" style="position: sticky; top: 5rem;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">🤖 Intelligent Resource Matcher</h2>
+            <p class="card-description">Rule-based scoring: Skill Match (50%) + Availability (30%) + Experience (20%)</p>
+          </div>
+        </div>
+
+        <!-- Explanation Alert -->
+        <div class="alert alert-info" style="font-size: 0.75rem; margin-bottom: 1rem;">
+          💡 <strong>How it works:</strong> The matcher dynamically scans developer skills against the task tags above, checks their assigned hours against their safe weekly capacity, and flags overload warnings in real time.
+        </div>
+
+        <!-- Candidates List Mount -->
+        <div id="recommendations-container">
+          <!-- Dynamic Recommendation Cards -->
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>Client-Side Frontend Demonstration | LocalStorage Persistent</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/tasks.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.tasksController.initCreateOrEditPage();
+    });
+  </script>
+</body>
+</html>

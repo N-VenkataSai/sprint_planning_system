@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer Dashboard - SprintAlloc</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Developer Identity Banner -->
+    <header class="card" style="margin-bottom: 1.75rem; border-top: 4px solid var(--success);">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div class="user-avatar" id="dev-avatar" style="width: 3.5rem; height: 3.5rem; font-size: 1.25rem;">CC</div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--slate-900);" id="dev-name">Charlie Chen</h1>
+              <span class="user-role-tag role-developer" style="border: 1px solid currentColor; padding: 0.15rem 0.5rem; border-radius: var(--radius-sm);">DEVELOPER</span>
+              <span class="badge badge-priority-high" id="dev-level-badge">Senior Level</span>
+            </div>
+            <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.15rem;" id="dev-title">
+              Senior Fullstack Engineer
+            </p>
+            <div class="skill-tags-list" id="dev-skills-container" style="margin-top: 0.5rem;">
+              <!-- Dynamic Skills -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Capacity Gauge -->
+        <div style="min-width: 260px; background-color: var(--slate-50); padding: 0.875rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--slate-700); margin-bottom: 0.35rem;">
+            <span>Weekly Workload Allocation:</span>
+            <span id="dev-capacity-text">0h / 40h</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill success" id="dev-capacity-meter" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overload Alert Banner (Hidden unless overloaded) -->
+      <div id="dev-overload-alert" class="alert alert-danger" style="display: none; margin-top: 1rem; margin-bottom: 0;"></div>
+    </header>
+
+    <!-- Developer Metrics Grid -->
+    <section class="metrics-grid">
+      <div class="metric-card primary">
+        <div class="metric-info">
+          <span class="metric-label">Assigned Tasks</span>
+          <span class="metric-value" id="metric-dev-active">0</span>
+          <span class="metric-sub">Active tasks in backlog/sprint</span>
+        </div>
+        <div class="metric-icon-wrap primary">📋</div>
+      </div>
+
+      <div class="metric-card warning">
+        <div class="metric-info">
+          <span class="metric-label">In Progress</span>
+          <span class="metric-value" id="metric-dev-inprogress">0</span>
+          <span class="metric-sub">Actively being worked on</span>
+        </div>
+        <div class="metric-icon-wrap warning">⚡</div>
+      </div>
+
+      <div class="metric-card success">
+        <div class="metric-info">
+          <span class="metric-label">Completed Tasks</span>
+          <span class="metric-value" id="metric-dev-done">0</span>
+          <span class="metric-sub">Marked Done this sprint</span>
+        </div>
+        <div class="metric-icon-wrap success">✅</div>
+      </div>
+
+      <div class="metric-card purple">
+        <div class="metric-info">
+          <span class="metric-label">Effort Logged</span>
+          <span class="metric-value" id="metric-dev-hours">0h</span>
+          <span class="metric-sub">Total tracked actual hours</span>
+        </div>
+        <div class="metric-icon-wrap purple">⏱️</div>
+      </div>
+    </section>
+
+    <!-- My Tasks Section -->
+    <section class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">💻 My Assigned Tasks &amp; Work Progress</h2>
+          <p class="card-description">Review required skills, deadlines, progress, and update status directly</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">Filter Status:</span>
+          <select id="dev-filter-status" class="form-control" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.8125rem;">
+            <option value="all">All Statuses</option>
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Code Review">Code Review</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">Priority:</span>
+          <select id="dev-filter-priority" class="form-control" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.8125rem;">
+            <option value="all">All Priorities</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tasks List Mount -->
+      <div id="dev-tasks-container">
+        <!-- Dynamic Task Cards -->
+      </div>
+    </section>
+
+    <!-- Effort Logs History Table -->
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">⏱️ My Recent Work &amp; Effort Logs</h2>
+          <p class="card-description">Audit history of tracked hours across tasks</p>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Work Date</th>
+              <th>Task</th>
+              <th>Hours Tracked</th>
+              <th>Activity Description / Notes</th>
+            </tr>
+          </thead>
+          <tbody id="effort-history-tbody">
+            <!-- Dynamic Work Log Rows -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Effort Logging Modal -->
+  <div class="modal-backdrop" id="effort-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">⏱️ Log Actual Effort Hours</h3>
+        <button type="button" class="modal-close" onclick="window.developerController.closeEffortModal()">&times;</button>
+      </div>
+      <form id="effort-modal-form">
+        <div class="modal-body">
+          <div style="margin-bottom: 1rem; background-color: var(--slate-50); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">TASK:</div>
+            <strong id="modal-effort-task-title" style="font-size: 0.9375rem; color: var(--slate-900);">TSK-101: Task Title</strong>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="modal-effort-hours">Hours Worked</label>
+              <input type="number" step="0.5" min="0.5" max="24" id="modal-effort-hours" class="form-control" required value="4">
+              <span class="form-text">e.g. 2.5 or 4 hours</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="modal-effort-date">Work Date</label>
+              <input type="date" id="modal-effort-date" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modal-effort-note">Activity Description / Work Notes</label>
+            <textarea id="modal-effort-note" class="form-control" rows="3" placeholder="Describe progress, code committed, tests passed, or blockers resolved..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="window.developerController.closeEffortModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Effort Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>Client-Side Frontend Demonstration | LocalStorage Persistent</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/developer.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.developerController.init();
+    });
+  </script>
+</body>
+</html>

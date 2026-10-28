@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create / Edit Project - SprintAlloc</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Page Header -->
+    <header class="page-header">
+      <div class="page-title-group">
+        <h1 id="page-heading">➕ Create New Project</h1>
+        <p class="page-subtitle" id="page-subheading">Define project scope, lead manager, developer team allocation, and target milestones</p>
+      </div>
+      <div class="page-actions">
+        <a href="admin.html" class="btn btn-secondary">← Cancel &amp; Return</a>
+      </div>
+    </header>
+
+    <!-- Two-Column Layout: Form & Live Preview Card -->
+    <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 2rem; align-items: start;">
+
+      <!-- Project Form Card -->
+      <section class="card">
+        <form id="project-form">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="project-id">Project ID</label>
+              <input type="text" id="project-id" class="form-control" style="font-family: monospace; font-weight: 700;" required>
+              <span class="form-text">Unique project code (e.g. PRJ-104)</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="project-category">Category</label>
+              <select id="project-category" class="form-control" required>
+                <option value="Cloud Infrastructure">Cloud Infrastructure</option>
+                <option value="Web Application">Web Application</option>
+                <option value="Data Platform">Data Platform</option>
+                <option value="Fintech &amp; Security">Fintech &amp; Security</option>
+                <option value="Mobile App">Mobile App</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label form-label-required" for="project-name">Project Title</label>
+            <input type="text" id="project-name" class="form-control" placeholder="e.g. Customer Authentication &amp; SSO Service" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="project-description">Project Description &amp; Business Objective</label>
+            <textarea id="project-description" class="form-control" rows="3" placeholder="Provide context, high-level deliverables, and agile milestones..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="project-manager">Lead Project Manager</label>
+              <select id="project-manager" class="form-control" required></select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="project-priority">Priority</label>
+              <select id="project-priority" class="form-control" required>
+                <option value="Critical">Critical</option>
+                <option value="High" selected>High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="project-status">Status</label>
+              <select id="project-status" class="form-control" required>
+                <option value="Active" selected>Active</option>
+                <option value="Planning">Planning</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Completed">Completed</option>
+                <option value="Archived">Archived</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="project-start-date">Start Date</label>
+              <input type="date" id="project-start-date" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="project-end-date">Target End Date</label>
+              <input type="date" id="project-end-date" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- Assign Team Members -->
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label form-label-required">Assign Team Developers</label>
+            <span class="form-text" style="margin-bottom: 0.5rem; display: block;">Select the developers authorized to be allocated tasks in this project:</span>
+            <div id="team-members-container" style="max-height: 280px; overflow-y: auto; padding-right: 0.25rem;">
+              <!-- Dynamic Dev Checkboxes -->
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            <a href="admin.html" class="btn btn-secondary">Cancel</a>
+            <button type="submit" id="submit-btn" class="btn btn-primary">🚀 Save Project</button>
+          </div>
+
+        </form>
+      </section>
+
+      <!-- Live Preview Card -->
+      <aside>
+        <div class="card" style="position: sticky; top: 5rem; border-top: 4px solid var(--secondary);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Live Preview</span>
+            <span id="preview-priority" class="badge badge-priority-medium">Medium</span>
+          </div>
+
+          <h3 id="preview-name" style="font-size: 1.25rem; font-weight: 800; color: var(--slate-900); margin-bottom: 0.35rem;">
+            New Project Title
+          </h3>
+
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <span id="preview-category" class="badge badge-todo">Category</span>
+            <span id="preview-status" class="badge badge-active">Active</span>
+          </div>
+
+          <p id="preview-desc" style="font-size: 0.8125rem; color: var(--slate-600); line-height: 1.5; margin-bottom: 1rem;">
+            Project description will appear here as you type...
+          </p>
+
+          <div style="background-color: var(--slate-50); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem; font-size: 0.8125rem; display: flex; flex-direction: column; gap: 0.35rem;">
+            <div>📅 <strong id="preview-dates">TBD → TBD</strong></div>
+            <div>👥 <strong id="preview-team-count">0 Developers Assigned</strong></div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>Client-Side Frontend Demonstration | LocalStorage Persistent</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/projects.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.projectsController.initCreateOrEditPage();
+    });
+  </script>
+</body>
+</html>

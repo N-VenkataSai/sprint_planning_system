@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics &amp; Resource Intelligence - SprintAlloc</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <!-- Chart.js local vendor and CDN fallback -->
+  <script src="vendor/chart.umd.min.js"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Page Header & Project Scope Filter -->
+    <header class="page-header">
+      <div class="page-title-group">
+        <h1>📈 Analytics &amp; Delivery Intelligence</h1>
+        <p class="page-subtitle">Sprint velocity trends, capacity utilization, burndown dynamics, and skill supply/demand metrics</p>
+      </div>
+
+      <div class="page-actions">
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: #fff; padding: 0.35rem 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">Scope:</span>
+          <select id="analytics-project-select" class="nav-select" style="min-width: 240px;"></select>
+        </div>
+
+        <button class="btn btn-secondary" onclick="window.analyticsController.printSummaryReport()">
+          🖨️ Print / Save Report
+        </button>
+      </div>
+    </header>
+
+    <!-- Top KPI Cards -->
+    <section class="metrics-grid">
+      <div class="metric-card success">
+        <div class="metric-info">
+          <span class="metric-label">Delivery Completion</span>
+          <span class="metric-value" id="kpi-completion-rate">0%</span>
+          <span class="metric-sub" id="kpi-sub-completion">Story points done</span>
+        </div>
+        <div class="metric-icon-wrap success">🏆</div>
+      </div>
+
+      <div class="metric-card primary">
+        <div class="metric-info">
+          <span class="metric-label">Average Sprint Velocity</span>
+          <span class="metric-value" id="kpi-velocity">0 SP</span>
+          <span class="metric-sub" id="kpi-sub-velocity">Delivered per sprint</span>
+        </div>
+        <div class="metric-icon-wrap primary">⚡</div>
+      </div>
+
+      <div class="metric-card info">
+        <div class="metric-info">
+          <span class="metric-label">Team Capacity Load</span>
+          <span class="metric-value" id="kpi-utilization">0%</span>
+          <span class="metric-sub" id="kpi-sub-utilization">Assigned vs Max Cap</span>
+        </div>
+        <div class="metric-icon-wrap info">⚖️</div>
+      </div>
+
+      <div class="metric-card warning">
+        <div class="metric-info">
+          <span class="metric-label">Tasks At Risk</span>
+          <span class="metric-value" id="kpi-risk-tasks">0</span>
+          <span class="metric-sub" id="kpi-sub-risk">Overdue &amp; tight schedule</span>
+        </div>
+        <div class="metric-icon-wrap warning">⚠️</div>
+      </div>
+    </section>
+
+    <!-- Charts Grid Row 1: Velocity & Status -->
+    <div class="charts-grid">
+
+      <!-- 1. Sprint Velocity Chart -->
+      <section class="chart-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">📊 Sprint Velocity History</h2>
+            <p class="card-description">Planned Capacity (SP) vs Actual Delivered Story Points</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-velocity"></canvas>
+        </div>
+      </section>
+
+      <!-- 2. Task Status Distribution -->
+      <section class="chart-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">🍩 Task Status Distribution</h2>
+            <p class="card-description">Current breakdown of tasks across workflow states</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-status"></canvas>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Charts Grid Row 2: Workload & Burndown -->
+    <div class="charts-grid">
+
+      <!-- 3. Developer Workload & Capacity Utilization -->
+      <section class="chart-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">⚖️ Developer Workload vs Capacity</h2>
+            <p class="card-description">Assigned weekly hours vs maximum safe capacity (Red indicates overload)</p>
+          </div>
+        </div>
+        <div class="chart-container tall">
+          <canvas id="chart-workload"></canvas>
+        </div>
+      </section>
+
+      <!-- 4. Sprint Burndown Chart -->
+      <section class="chart-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">📉 Active Sprint Burndown</h2>
+            <p class="card-description">Ideal linear burndown trajectory vs actual remaining story points</p>
+          </div>
+        </div>
+        <div class="chart-container tall">
+          <canvas id="chart-burndown"></canvas>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Charts Grid Row 3: Skills & Risk Matrix -->
+    <div class="charts-grid">
+
+      <!-- 5. Team Skill Distribution & Backlog Demand -->
+      <section class="chart-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">🧩 Skill Supply vs Backlog Demand</h2>
+            <p class="card-description">Required task skills vs developer skill proficiencies in the team</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-skills"></canvas>
+        </div>
+      </section>
+
+      <!-- 6. Deadline Risk Matrix -->
+      <section class="chart-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">🚨 Deadline Risk Distribution</h2>
+            <p class="card-description">Calculated risk ratings based on remaining effort vs days remaining</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-risk"></canvas>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>Client-Side Frontend Demonstration | LocalStorage Persistent</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/analytics.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.analyticsController.init();
+    });
+  </script>
+</body>
+</html>

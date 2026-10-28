@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprint Planning &amp; Allocation Board - SprintAlloc</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Page Header & Sprint Picker -->
+    <header class="page-header">
+      <div class="page-title-group">
+        <h1>🎯 Sprint Planning &amp; Resource Allocation</h1>
+        <p class="page-subtitle" id="sprint-project-title">Project Sprint Scope &amp; Capacity Balancer</p>
+      </div>
+
+      <div class="page-actions">
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: #fff; padding: 0.35rem 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">Active Sprint:</span>
+          <select id="sprint-select" class="nav-select" style="min-width: 220px;"></select>
+        </div>
+
+        <button class="btn btn-primary" onclick="window.sprintPlanningController.openCreateSprintModal()">
+          ➕ New Sprint
+        </button>
+      </div>
+    </header>
+
+    <div id="sprint-board-wrapper">
+
+      <!-- Sprint Banner & Capacity Metrics -->
+      <section class="card" style="margin-bottom: 1.5rem; border-top: 4px solid var(--primary);">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+              <span id="sprint-status-badge" class="badge badge-active">Active</span>
+              <span style="font-size: 0.8125rem; color: var(--text-muted);" id="sprint-dates-display">📅 Oct 16 → Oct 30</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--slate-900);" id="sprint-name-display">
+              Sprint Name
+            </h2>
+            <p style="font-size: 0.875rem; color: var(--slate-600); margin-top: 0.25rem;" id="sprint-goal-display">
+              Sprint goal description...
+            </p>
+          </div>
+
+          <!-- Sprint Actions -->
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button id="sprint-action-btn" class="btn btn-sm btn-success">
+              🏁 Complete Sprint
+            </button>
+          </div>
+        </div>
+
+        <!-- Capacity Limits Bars -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; padding-top: 0.875rem; border-top: 1px solid var(--border-subtle);">
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; margin-bottom: 0.35rem;">
+              <span>Committed Story Points vs Capacity</span>
+              <strong id="sprint-pts-ratio">0 / 0 SP (0%)</strong>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill success" id="sprint-pts-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; margin-bottom: 0.35rem;">
+              <span>Committed Hours vs Team Capacity</span>
+              <strong id="sprint-hrs-ratio">0 / 0 Hours (0%)</strong>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill success" id="sprint-hrs-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overload Alert Banner -->
+        <div id="sprint-capacity-alert" class="alert alert-danger" style="display: none; margin-top: 1rem; margin-bottom: 0; font-size: 0.8125rem;"></div>
+      </section>
+
+      <!-- Main Layout: Split Columns & Workload Balancer -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; align-items: start;">
+
+        <!-- Backlog vs Sprint Scope (2 Columns) -->
+        <div class="sprint-split-board">
+
+          <!-- Left Column: Product Backlog -->
+          <div class="sprint-column">
+            <div class="sprint-column-header">
+              <div>
+                <strong style="color: var(--slate-900);">📦 Product Backlog</strong>
+                <span class="badge badge-todo" id="backlog-count" style="margin-left: 0.35rem;">0</span>
+              </div>
+              <a href="create-task.html" class="btn btn-sm btn-secondary">+ Task</a>
+            </div>
+            <div class="sprint-column-body" id="backlog-tasks-container">
+              <!-- Dynamic Backlog Tasks -->
+            </div>
+          </div>
+
+          <!-- Right Column: Current Sprint Scope -->
+          <div class="sprint-column" style="border-top: 3px solid var(--primary);">
+            <div class="sprint-column-header">
+              <div>
+                <strong style="color: var(--primary);">🎯 Sprint Commitment</strong>
+                <span class="badge badge-active" id="sprint-task-count" style="margin-left: 0.35rem;">0</span>
+              </div>
+            </div>
+            <div class="sprint-column-body" id="sprint-tasks-container">
+              <!-- Dynamic Sprint Tasks -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Developer Workload Capacity Summary -->
+        <aside class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" style="font-size: 1rem;">⚖️ Developer Capacity</h3>
+              <p class="card-description">Assigned hours in this sprint vs weekly limit</p>
+            </div>
+          </div>
+          <div id="team-workload-container">
+            <!-- Dynamic Dev Capacity Meters -->
+          </div>
+        </aside>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Create Sprint Modal -->
+  <div class="modal-backdrop" id="create-sprint-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">➕ Create New Sprint</h3>
+        <button type="button" class="modal-close" onclick="window.sprintPlanningController.closeCreateSprintModal()">&times;</button>
+      </div>
+      <form id="new-sprint-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label form-label-required" for="new-sprint-name">Sprint Name</label>
+            <input type="text" id="new-sprint-name" class="form-control" placeholder="e.g. Sprint 15: Database Migration" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-sprint-goal">Sprint Goal</label>
+            <textarea id="new-sprint-goal" class="form-control" rows="2" placeholder="What is the key business or technical outcome of this sprint?"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="new-sprint-start">Start Date</label>
+              <input type="date" id="new-sprint-start" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label form-label-required" for="new-sprint-end">End Date</label>
+              <input type="date" id="new-sprint-end" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="new-sprint-pts">Capacity Target (Story Points)</label>
+              <input type="number" id="new-sprint-pts" class="form-control" value="35" min="5" max="200" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label form-label-required" for="new-sprint-hrs">Capacity Target (Hours)</label>
+              <input type="number" id="new-sprint-hrs" class="form-control" value="120" min="10" max="600" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="window.sprintPlanningController.closeCreateSprintModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Sprint</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Recommendation Explanation Modal -->
+  <div class="modal-backdrop" id="rec-modal-backdrop">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">🤖 Explainable Resource Allocation Breakdown</h3>
+        <button type="button" class="modal-close" onclick="window.sprintPlanningController.closeRecModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="rec-modal-content">
+        <!-- Dynamic Breakdown Content -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.sprintPlanningController.closeRecModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>Client-Side Frontend Demonstration | LocalStorage Persistent</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/sprint-planning.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.sprintPlanningController.init();
+    });
+  </script>
+</body>
+</html>
