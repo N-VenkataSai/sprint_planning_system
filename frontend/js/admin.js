@@ -8,6 +8,8 @@ class AdminController {
     this.storage = window.storageManager;
     this.auth = window.authManager;
     this.editingUserId = null;
+    this.userCurrentPage = 1;
+    this.userPageSize = 10;
   }
 
   init() {
@@ -142,7 +144,11 @@ class AdminController {
       );
     }
 
-    if (users.length === 0) {
+    const totalUsers = users.length;
+    const paginationInfo = document.getElementById('user-pagination-info');
+    const paginationButtons = document.getElementById('user-pagination-buttons');
+
+    if (totalUsers === 0) {
       container.innerHTML = `
         <tr>
           <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
@@ -150,10 +156,53 @@ class AdminController {
           </td>
         </tr>
       `;
+      if (paginationInfo) paginationInfo.textContent = 'Showing 0-0 of 0 users';
+      if (paginationButtons) paginationButtons.innerHTML = '';
       return;
     }
 
-    container.innerHTML = users.map(u => {
+    const isPaged = this.userPageSize !== 'all';
+    const pageSize = isPaged ? parseInt(this.userPageSize) : totalUsers;
+    const totalPages = isPaged ? Math.ceil(totalUsers / pageSize) : 1;
+
+    if (this.userCurrentPage > totalPages) {
+      this.userCurrentPage = 1;
+    }
+
+    let displayUsers = users;
+    if (isPaged) {
+      const startIndex = (this.userCurrentPage - 1) * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, totalUsers);
+      displayUsers = users.slice(startIndex, endIndex);
+
+      if (paginationInfo) {
+        paginationInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${totalUsers} users`;
+      }
+    } else {
+      if (paginationInfo) {
+        paginationInfo.textContent = `Showing all ${totalUsers} users`;
+      }
+    }
+
+    if (paginationButtons) {
+      if (totalPages > 1) {
+        let btnHtml = '';
+        btnHtml += `<button type="button" class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.75rem;" ${this.userCurrentPage === 1 ? 'disabled' : ''} onclick="window.adminController.handleUserPageChange(${this.userCurrentPage - 1})">Prev</button>`;
+        for (let p = 1; p <= totalPages; p++) {
+          if (p === 1 || p === totalPages || (p >= this.userCurrentPage - 1 && p <= this.userCurrentPage + 1)) {
+            btnHtml += `<button type="button" class="btn btn-sm ${p === this.userCurrentPage ? 'btn-primary' : 'btn-secondary'}" style="padding: 0.15rem 0.5rem; font-size: 0.75rem;" onclick="window.adminController.handleUserPageChange(${p})">${p}</button>`;
+          } else if (p === this.userCurrentPage - 2 || p === this.userCurrentPage + 2) {
+            btnHtml += `<span style="padding: 0.15rem 0.25rem; color: var(--text-muted); font-size: 0.75rem;">...</span>`;
+          }
+        }
+        btnHtml += `<button type="button" class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.75rem;" ${this.userCurrentPage === totalPages ? 'disabled' : ''} onclick="window.adminController.handleUserPageChange(${this.userCurrentPage + 1})">Next</button>`;
+        paginationButtons.innerHTML = btnHtml;
+      } else {
+        paginationButtons.innerHTML = '';
+      }
+    }
+
+    container.innerHTML = displayUsers.map(u => {
       const roleBadgeClass = u.role === 'admin' ? 'role-admin' : u.role === 'manager' ? 'role-manager' : 'role-developer';
       return `
         <tr>
@@ -189,6 +238,17 @@ class AdminController {
         </tr>
       `;
     }).join('');
+  }
+
+  handlePageSizeChange(newSize) {
+    this.userPageSize = newSize === 'all' ? 'all' : parseInt(newSize);
+    this.userCurrentPage = 1;
+    this.renderUsersTable();
+  }
+
+  handleUserPageChange(pageNum) {
+    this.userCurrentPage = pageNum;
+    this.renderUsersTable();
   }
 
   archiveProject(projectId) {
@@ -326,6 +386,129 @@ class AdminController {
 
   closeImportModal() {
     document.getElementById('import-modal').classList.remove('show');
+  }
+
+  openImportDevModal() {
+    const modal = document.getElementById('import-dev-modal');
+    if (!modal) return;
+
+    const projSelect = document.getElementById('import-dev-project');
+    if (projSelect) {
+      const projects = this.storage.getProjects();
+      projSelect.innerHTML = `
+        <option value="">-- No direct project association (Global) --</option>
+        ${projects.map(p => `<option value="${p.id}">${p.id} - ${p.name}</option>`).join('')}
+      `;
+    }
+
+    const fileInput = document.getElementById('import-dev-file');
+    if (fileInput) fileInput.value = '';
+
+    const textarea = document.getElementById('import-dev-textarea');
+    if (textarea) textarea.value = '';
+
+    const resultsPanel = document.getElementById('import-dev-results');
+    if (resultsPanel) {
+      resultsPanel.style.display = 'none';
+      resultsPanel.innerHTML = '';
+    }
+
+    modal.classList.add('show');
+  }
+
+  closeImportDevModal() {
+    const modal = document.getElementById('import-dev-modal');
+    if (modal) modal.classList.remove('show');
+  }
+
+  handleFileSelected(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target.result;
+      const textarea = document.getElementById('import-dev-textarea');
+      if (textarea) textarea.value = content;
+      this.auth.showToast(`Loaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
+    };
+    reader.readAsText(file);
+  }
+
+  processDeveloperImport() {
+    const textarea = document.getElementById('import-dev-textarea');
+    const content = textarea ? textarea.value.trim() : '';
+
+    if (!content) {
+      this.auth.showToast('Please select a file or paste developer dataset records.', 'warning');
+      return;
+    }
+
+    const projSelect = document.getElementById('import-dev-project');
+    const targetProjectId = projSelect ? projSelect.value : null;
+
+    const result = this.storage.importDevelopersDataset(content, targetProjectId);
+    const resultsPanel = document.getElementById('import-dev-results');
+
+    if (!resultsPanel) return;
+
+    resultsPanel.style.display = 'block';
+
+    let html = `
+      <div style="background-color: var(--slate-100); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.875rem;">
+        <h4 style="font-size: 0.875rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--slate-900);">
+          📊 Developer Dataset Import &amp; Validation Audit
+        </h4>
+        <div style="display: flex; gap: 1rem; font-size: 0.8125rem; margin-bottom: 0.75rem;">
+          <div>Total Processed: <strong>${result.totalProcessed}</strong></div>
+          <div style="color: var(--success);">✅ Successfully Imported: <strong>${result.importedCount}</strong></div>
+          <div style="color: ${result.rejectedCount > 0 ? 'var(--danger)' : 'var(--text-muted)'};">
+            ${result.rejectedCount > 0 ? '❌' : '✓'} Rejected Records: <strong>${result.rejectedCount}</strong>
+          </div>
+        </div>
+    `;
+
+    if (result.rejectedCount > 0) {
+      html += `
+        <div style="margin-top: 0.5rem;">
+          <strong style="color: var(--danger); font-size: 0.75rem;">Detailed Rejection Log (records not silently discarded):</strong>
+          <div style="max-height: 160px; overflow-y: auto; margin-top: 0.35rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); background: white;">
+            <table class="table" style="font-size: 0.75rem; margin-bottom: 0;">
+              <thead>
+                <tr style="background: var(--slate-50);">
+                  <th style="padding: 0.35rem 0.5rem;">Row #</th>
+                  <th style="padding: 0.35rem 0.5rem;">Record Name</th>
+                  <th style="padding: 0.35rem 0.5rem;">Email</th>
+                  <th style="padding: 0.35rem 0.5rem;">Validation Rejection Reason(s)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${result.rejectedRecords.map(r => `
+                  <tr>
+                    <td style="padding: 0.35rem 0.5rem; font-weight: 600;">${r.rowNumber}</td>
+                    <td style="padding: 0.35rem 0.5rem;">${r.name}</td>
+                    <td style="padding: 0.35rem 0.5rem; font-family: monospace;">${r.email}</td>
+                    <td style="padding: 0.35rem 0.5rem; color: var(--danger);">${r.reasons.join('<br>')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+    resultsPanel.innerHTML = html;
+
+    if (result.importedCount > 0) {
+      this.auth.showToast(`Imported ${result.importedCount} valid developer records!`, 'success');
+      this.renderMetrics();
+      this.renderUsersTable();
+      this.renderProjectsTable();
+    } else {
+      this.auth.showToast('No records were imported. Please review the validation errors above.', 'warning');
+    }
   }
 
   handleImportData() {

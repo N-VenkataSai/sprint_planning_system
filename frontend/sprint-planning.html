@@ -124,17 +124,32 @@
         </div>
 
         <!-- Developer Workload Capacity Summary -->
-        <aside class="card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title" style="font-size: 1rem;">⚖️ Developer Capacity</h3>
-              <p class="card-description">Assigned hours in this sprint vs weekly limit</p>
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <aside class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title" style="font-size: 1rem;">⚖️ Developer Capacity</h3>
+                <p class="card-description">Assigned hours in this sprint vs weekly limit</p>
+              </div>
             </div>
-          </div>
-          <div id="team-workload-container">
-            <!-- Dynamic Dev Capacity Meters -->
-          </div>
-        </aside>
+            <div id="team-workload-container">
+              <!-- Dynamic Dev Capacity Meters -->
+            </div>
+          </aside>
+
+          <!-- Unassigned Developers & Allocation Audit -->
+          <aside class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title" style="font-size: 1rem;">👥 Unassigned Developers &amp; Allocation Audit</h3>
+                <p class="card-description">Explains why available team members have no sprint assignments</p>
+              </div>
+            </div>
+            <div id="unassigned-developers-container" style="padding: 0.5rem 0;">
+              <!-- Dynamic unassigned developer explanations -->
+            </div>
+          </aside>
+        </div>
 
       </div>
 

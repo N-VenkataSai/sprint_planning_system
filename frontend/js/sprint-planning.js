@@ -71,6 +71,7 @@ class SprintPlanningController {
     this.renderBacklogColumn();
     this.renderSprintColumn(sprint);
     this.renderTeamWorkloadSummary(sprint);
+    this.renderUnassignedDevelopers(sprint);
   }
 
   renderNoSprintState() {
@@ -357,35 +358,97 @@ class SprintPlanningController {
     this.render();
   }
 
+  renderUnassignedDevelopers(sprint) {
+    const container = document.getElementById('unassigned-developers-container');
+    if (!container) return;
+
+    const unassignedList = this.storage.getUnassignedDevelopersExplanation(this.activeProjectId, sprint.id);
+
+    if (unassignedList.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.8125rem;">
+          ✓ All eligible developers have assigned tasks in this sprint.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = unassignedList.map(item => {
+      const dev = item.developer;
+      const statusBadge = item.statusTag === 'Available Capacity' 
+        ? 'badge-success' 
+        : item.statusTag === 'Skill Mismatch' 
+          ? 'badge-warning' 
+          : 'badge-todo';
+
+      return `
+        <div style="padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--border-subtle); font-size: 0.8125rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <div class="user-avatar" style="width: 1.625rem; height: 1.625rem; font-size: 0.625rem;">${dev.avatar || 'U'}</div>
+              <strong style="color: var(--slate-900); font-size: 0.8125rem;">${dev.name}</strong>
+            </div>
+            <span class="badge ${statusBadge}" style="font-size: 0.6875rem;">${item.statusTag}</span>
+          </div>
+          <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.2rem; line-height: 1.35;">
+            ${item.reason}
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--slate-500); margin-top: 0.25rem;">
+            <span>Capacity: <strong>${item.availableHours}h/week</strong></span>
+            <span>Skills: ${(item.skills || []).slice(0, 3).join(', ') || 'None'}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
   assignDeveloperToTask(taskId, developerId) {
     const task = this.storage.getTaskById(taskId);
     if (!task) return;
 
     if (!developerId) {
       task.assigneeId = null;
+      delete task.managerOverride;
       this.storage.saveTask(task);
       this.auth.showToast('Task marked as Unassigned.', 'info');
       this.render();
       return;
     }
 
-    const dev = this.storage.getUserById(developerId);
-    const est = parseFloat(task.estimatedHours) || 8;
-    const currentWorkload = this.storage.calculateDeveloperWorkload(developerId, this.activeSprintId);
-    const postHours = (currentWorkload ? currentWorkload.assignedHours : 0) + (task.assigneeId === developerId ? 0 : est);
+    const validation = this.storage.validateAssignment(taskId, developerId, this.activeSprintId);
+    if (!validation.valid) {
+      this.auth.showToast(validation.error || 'Assignment validation failed.', 'danger');
+      return;
+    }
 
-    if (postHours > (dev.maxWeeklyHours || 40)) {
-      const excess = Math.round((postHours - dev.maxWeeklyHours) * 10) / 10;
-      const proceed = confirm(`⚠️ Workload Warning: Assigning this task will exceed ${dev.name}'s capacity by ${excess} hours in this sprint (${postHours}h / ${dev.maxWeeklyHours}h - ${Math.round((postHours / dev.maxWeeklyHours) * 100)}%). Do you want to proceed anyway?`);
+    const dev = validation.developer;
+
+    if (validation.requiresOverride) {
+      const issueBullets = validation.issues.map((iss, i) => `  ${i + 1}. ${iss}`).join('\n');
+      const proceed = confirm(
+        `⚠️ Project Manager Authorization Override Required\n\n` +
+        `Assigning "${task.title}" to ${dev.name} has the following policy exceptions:\n\n` +
+        `${issueBullets}\n\n` +
+        `Do you want to explicitly authorize this allocation override?`
+      );
+
       if (!proceed) {
-        this.render(); // reset dropdown to previous state
+        this.render();
         return;
       }
+
+      task.managerOverride = {
+        authorizedAt: new Date().toISOString(),
+        authorizedBy: this.auth.getCurrentUser()?.name || 'Project Manager',
+        reasons: validation.issues
+      };
+    } else {
+      delete task.managerOverride;
     }
 
     task.assigneeId = developerId;
     this.storage.saveTask(task);
-    this.auth.showToast(`Assigned to ${dev.name}`, 'success');
+    this.auth.showToast(`Assigned to ${dev.name}${validation.requiresOverride ? ' (PM Override)' : ''}`, 'success');
     this.render();
   }
 

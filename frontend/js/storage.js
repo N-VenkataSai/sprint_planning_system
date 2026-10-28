@@ -234,6 +234,245 @@ class StorageManager {
     return true;
   }
 
+  // --- Developer Dataset Importer & Validator ---
+  _parseCSV(csvText) {
+    const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
+    if (lines.length < 2) return [];
+
+    const parseLine = (line) => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"' || char === "'") {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim().replace(/^["']|["']$/g, ''));
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim().replace(/^["']|["']$/g, ''));
+      return result;
+    };
+
+    const headers = parseLine(lines[0]).map(h => h.trim());
+    const records = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseLine(lines[i]);
+      if (values.length === 0 || (values.length === 1 && !values[0])) continue;
+      const record = {};
+      headers.forEach((header, index) => {
+        record[header] = values[index] !== undefined ? values[index] : '';
+      });
+      records.push(record);
+    }
+    return records;
+  }
+
+  /**
+   * Import and validate developer records from real datasets.
+   * Enforces complete processing: never limits imports to a fixed count.
+   * Validates every record, reports line-by-line rejection reasons, and preserves IDs.
+   */
+  importDevelopersDataset(inputData, targetProjectId = null) {
+    let rawRecords = [];
+
+    if (Array.isArray(inputData)) {
+      rawRecords = inputData;
+    } else if (typeof inputData === 'string') {
+      const trimmed = inputData.trim();
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          rawRecords = Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+          return {
+            success: false,
+            totalProcessed: 0,
+            importedCount: 0,
+            rejectedCount: 0,
+            importedRecords: [],
+            rejectedRecords: [],
+            error: `JSON parse error: ${e.message}`
+          };
+        }
+      } else {
+        rawRecords = this._parseCSV(trimmed);
+      }
+    }
+
+    if (!rawRecords || rawRecords.length === 0) {
+      return {
+        success: false,
+        totalProcessed: 0,
+        importedCount: 0,
+        rejectedCount: 0,
+        importedRecords: [],
+        rejectedRecords: [],
+        error: 'No valid data rows found to import.'
+      };
+    }
+
+    const state = this.getState();
+    const existingUsers = state.users || [];
+    const existingIds = new Set(existingUsers.map(u => String(u.id).toLowerCase()));
+    const existingEmails = new Set(existingUsers.map(u => String(u.email).toLowerCase()));
+
+    const batchIds = new Set();
+    const batchEmails = new Set();
+
+    const importedRecords = [];
+    const rejectedRecords = [];
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    rawRecords.forEach((raw, idx) => {
+      const rowNum = idx + 1;
+      const reasons = [];
+
+      const rawName = raw.name || raw.fullName || raw.full_name || raw.developer_name || '';
+      const rawEmail = raw.email || raw.developer_email || raw.email_address || '';
+      const rawId = raw.id || raw.developer_id || raw.dev_id || '';
+      const rawRole = String(raw.role || raw.system_role || 'developer').toLowerCase();
+      const rawTitle = raw.title || raw.job_title || raw.position || 'Software Developer';
+      const rawExp = raw.experienceLevel || raw.experience_level || raw.seniority || raw.level || 'Mid';
+      const rawSkills = raw.skills || raw.skill_tags || raw.technologies || [];
+      const rawCapacity = raw.maxWeeklyHours || raw.weekly_capacity || raw.capacity || raw.maxHours || 40;
+      const rawProjects = raw.assignedProjects || raw.projects || raw.project_ids || [];
+
+      // Validation 1: Name
+      const cleanName = String(rawName).trim();
+      if (!cleanName || cleanName.length < 2) {
+        reasons.push('Name is required and must be at least 2 characters.');
+      }
+
+      // Validation 2: Email
+      const cleanEmail = String(rawEmail).trim().toLowerCase();
+      if (!cleanEmail) {
+        reasons.push('Email address is required.');
+      } else if (!emailRegex.test(cleanEmail)) {
+        reasons.push(`Invalid email format: "${cleanEmail}".`);
+      } else if (existingEmails.has(cleanEmail)) {
+        reasons.push(`Email already registered in system: "${cleanEmail}".`);
+      } else if (batchEmails.has(cleanEmail)) {
+        reasons.push(`Duplicate email within dataset: "${cleanEmail}".`);
+      }
+
+      // Validation 3: ID (if provided)
+      let cleanId = String(rawId).trim();
+      if (cleanId) {
+        const lowerId = cleanId.toLowerCase();
+        if (existingIds.has(lowerId)) {
+          reasons.push(`Developer ID already exists in system: "${cleanId}".`);
+        } else if (batchIds.has(lowerId)) {
+          reasons.push(`Duplicate Developer ID within dataset: "${cleanId}".`);
+        }
+      } else {
+        cleanId = this._generateId('USR');
+      }
+
+      // Validation 4: Capacity
+      const numCapacity = parseFloat(rawCapacity);
+      if (isNaN(numCapacity) || numCapacity <= 0 || numCapacity > 80) {
+        reasons.push(`Invalid weekly capacity: "${rawCapacity}". Must be a number between 1 and 80.`);
+      }
+
+      // Validation 5: Role
+      const validRoles = ['developer', 'manager', 'admin'];
+      const normalizedRole = validRoles.includes(rawRole) ? rawRole : 'developer';
+
+      // Validation 6: Experience Level normalization
+      let normalizedExp = 'Mid';
+      const expStr = String(rawExp).trim().toLowerCase();
+      if (expStr.includes('sr') || expStr.includes('senior') || expStr.includes('lead') || expStr === '3') {
+        normalizedExp = 'Senior';
+      } else if (expStr.includes('jr') || expStr.includes('junior') || expStr.includes('entry') || expStr === '1') {
+        normalizedExp = 'Junior';
+      } else {
+        normalizedExp = 'Mid';
+      }
+
+      // Skills normalization
+      let skillsList = [];
+      if (Array.isArray(rawSkills)) {
+        skillsList = rawSkills.map(s => String(s).trim()).filter(Boolean);
+      } else if (typeof rawSkills === 'string') {
+        skillsList = rawSkills.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+      }
+      skillsList = Array.from(new Set(skillsList));
+
+      // Projects association
+      let projectList = [];
+      if (Array.isArray(rawProjects)) {
+        projectList = rawProjects.map(p => String(p).trim()).filter(Boolean);
+      } else if (typeof rawProjects === 'string') {
+        projectList = rawProjects.split(/[,;|]/).map(p => p.trim()).filter(Boolean);
+      }
+      if (targetProjectId && !projectList.includes(targetProjectId)) {
+        projectList.push(targetProjectId);
+      }
+
+      if (reasons.length > 0) {
+        rejectedRecords.push({
+          rowNumber: rowNum,
+          name: cleanName || 'Unknown',
+          email: cleanEmail || 'N/A',
+          reasons
+        });
+      } else {
+        batchEmails.add(cleanEmail);
+        batchIds.add(cleanId.toLowerCase());
+
+        const initials = cleanName.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase() || 'DV';
+        const user = {
+          id: cleanId,
+          name: cleanName,
+          email: cleanEmail,
+          role: normalizedRole,
+          title: String(rawTitle).trim() || 'Software Developer',
+          experienceLevel: normalizedExp,
+          avatar: initials,
+          skills: skillsList,
+          maxWeeklyHours: Math.round(numCapacity),
+          assignedProjects: projectList,
+          createdAt: new Date().toISOString()
+        };
+
+        importedRecords.push(user);
+        state.users.push(user);
+
+        if (projectList.length > 0) {
+          projectList.forEach(prjId => {
+            const project = state.projects.find(p => p.id === prjId);
+            if (project) {
+              project.teamMemberIds = project.teamMemberIds || [];
+              if (!project.teamMemberIds.includes(user.id)) {
+                project.teamMemberIds.push(user.id);
+              }
+            }
+          });
+        }
+      }
+    });
+
+    if (importedRecords.length > 0) {
+      this.saveState(state);
+    }
+
+    return {
+      success: importedRecords.length > 0,
+      totalProcessed: rawRecords.length,
+      importedCount: importedRecords.length,
+      rejectedCount: rejectedRecords.length,
+      importedRecords,
+      rejectedRecords
+    };
+  }
+
   // --- Projects CRUD ---
   getProjects() {
     return this.getState().projects || [];
@@ -862,6 +1101,115 @@ class StorageManager {
       hourCapacityPercent,
       isCapacityExceeded: (capacityPoints > 0 && totalPoints > capacityPoints) || (capacityHours > 0 && totalHours > capacityHours)
     };
+  }
+
+  /**
+   * Rule 5: Assignment Validator with PM Override Control
+   * Verifies that the developer meets requirements and has sufficient capacity.
+   * If not, flags that an explicit Project Manager Override is required.
+   */
+  validateAssignment(taskId, developerId, sprintId = null) {
+    const task = this.getTaskById(taskId);
+    if (!task) return { valid: false, error: 'Task not found.' };
+    if (!developerId) return { valid: true, requiresOverride: false, issues: [] };
+
+    const dev = this.getUserById(developerId);
+    if (!dev) return { valid: false, error: 'Developer not found.' };
+
+    const issues = [];
+    const targetSprint = sprintId || task.sprintId;
+    const est = parseFloat(task.estimatedHours) || 0;
+    const workload = this.calculateDeveloperWorkload(developerId, targetSprint);
+    const currentAssigned = workload ? workload.assignedHours : 0;
+    const isCurrentlyAssigned = (task.assigneeId === developerId);
+    const projectedAssigned = currentAssigned + (isCurrentlyAssigned ? 0 : est);
+    const maxCapacity = dev.maxWeeklyHours || 40;
+
+    const willExceedCapacity = (maxCapacity > 0 && projectedAssigned > maxCapacity);
+    if (willExceedCapacity) {
+      const excess = Math.round((projectedAssigned - maxCapacity) * 10) / 10;
+      issues.push(`Capacity Exceeded: Increases load to ${projectedAssigned}h / ${maxCapacity}h (exceeds weekly limit by ${excess}h).`);
+    }
+
+    const skillEval = this.calculateSkillMatch(task.requiredSkills, dev.skills);
+    if (task.requiredSkills && task.requiredSkills.length > 0 && skillEval.matchedSkills.length === 0) {
+      issues.push(`Skill Requirement Not Met: Developer lacks required skills [${task.requiredSkills.join(', ')}].`);
+    }
+
+    return {
+      valid: true,
+      requiresOverride: issues.length > 0,
+      willExceedCapacity,
+      skillIssues: skillEval.missingSkills,
+      issues,
+      developer: dev,
+      task
+    };
+  }
+
+  /**
+   * Rule 6: Unassigned Developers Audit & Allocation Explainer
+   * Evaluates all developers who have no tasks in the sprint/project.
+   * Explains why no assignment was made without forcing developers to receive tasks.
+   */
+  getUnassignedDevelopersExplanation(projectId, sprintId = null) {
+    const allDevs = this.getDevelopers();
+    const project = projectId ? this.getProjectById(projectId) : null;
+
+    const eligibleDevs = allDevs.filter(dev => {
+      if (!project || !project.teamMemberIds || project.teamMemberIds.length === 0) return true;
+      return project.teamMemberIds.includes(dev.id);
+    });
+
+    const activeTasks = sprintId 
+      ? this.getTasksBySprint(sprintId) 
+      : (projectId ? this.getTasksByProject(projectId) : this.getTasks());
+
+    const pendingBacklogTasks = projectId
+      ? this.getTasksByProject(projectId).filter(t => !t.sprintId && t.status !== 'Done')
+      : this.getTasks().filter(t => !t.sprintId && t.status !== 'Done');
+
+    const result = [];
+
+    eligibleDevs.forEach(dev => {
+      const assignedToDev = activeTasks.filter(t => t.assigneeId === dev.id);
+      if (assignedToDev.length === 0) {
+        let reason = '';
+        let statusTag = 'Available';
+
+        if (!dev.maxWeeklyHours || dev.maxWeeklyHours <= 0) {
+          reason = 'Developer has 0 configured weekly capacity hours.';
+          statusTag = 'Inactive';
+        } else if (pendingBacklogTasks.length === 0 && activeTasks.length === 0) {
+          reason = 'No active sprint tasks or backlog tasks exist in this project.';
+          statusTag = 'Idle';
+        } else {
+          const matchingTasks = pendingBacklogTasks.filter(task => {
+            if (!task.requiredSkills || task.requiredSkills.length === 0) return true;
+            const match = this.calculateSkillMatch(task.requiredSkills, dev.skills);
+            return match.matchedSkills.length > 0;
+          });
+
+          if (matchingTasks.length === 0 && pendingBacklogTasks.length > 0) {
+            reason = `No pending backlog tasks match developer's skills (${dev.skills.join(', ') || 'No skills listed'}).`;
+            statusTag = 'Skill Mismatch';
+          } else {
+            reason = `Developer is fully available (${dev.maxWeeklyHours}h/week capacity). Remaining backlog tasks were allocated to higher-ranked candidates or are uncommitted.`;
+            statusTag = 'Available Capacity';
+          }
+        }
+
+        result.push({
+          developer: dev,
+          statusTag,
+          reason,
+          availableHours: dev.maxWeeklyHours || 40,
+          skills: dev.skills || []
+        });
+      }
+    });
+
+    return result;
   }
 }
 

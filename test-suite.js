@@ -365,11 +365,110 @@ if (prjStats.totalTasks === 3 && prjStats.overdueCount === 1) {
   process.exit(1);
 }
 
-// 6. Test Backup, Restore, and Wipe
-console.log('\n--- 6. Testing JSON Backup, Import, and Clean Data Wipe ---');
+// 6. Test Complete Developer Dataset Import & Resource Allocation Rules
+console.log('\n--- 6. Testing Developer Dataset Import, Validation Audit & Resource Allocation Rules ---');
+
+// Test A: Developer Dataset Import from CSV with Validation and Rejection Reporting
+const sampleDevCsv = `id,name,email,role,title,experienceLevel,skills,maxWeeklyHours,assignedProjects
+DEV-101,Elena Rostova,elena@company.org,developer,Senior AI Engineer,Senior,"Python, PyTorch, CatBoost",40,PRJ-NEO
+DEV-102,Tariq Al-Mansoor,tariq@company.org,developer,Full Stack Developer,Mid,"TypeScript, React, Node.js",35,PRJ-NEO
+DEV-103,Chloe Zhao,chloe@company.org,developer,Data Engineer,Mid,"SQL, Spark, Python",40,PRJ-NEO
+DEV-BAD1,,missing_name@company.org,developer,Tester,Junior,"QA",30,PRJ-NEO
+DEV-BAD2,Bad Capacity Dev,bad.cap@company.org,developer,Dev,Mid,"Go",-15,PRJ-NEO
+DEV-BAD3,Invalid Email Dev,not-an-email,developer,Dev,Mid,"Java",40,PRJ-NEO
+`;
+
+const importReport = storage.importDevelopersDataset(sampleDevCsv, 'PRJ-NEO');
+console.log(`Developer Import: ${importReport.totalProcessed} processed, ${importReport.importedCount} valid imported, ${importReport.rejectedCount} rejected.`);
+
+if (importReport.totalProcessed === 6 && importReport.importedCount === 3 && importReport.rejectedCount === 3) {
+  console.log('✅ PASS: Complete dataset import verified: All valid records imported without arbitrary caps.');
+} else {
+  console.error('❌ FAIL: Developer dataset import counts mismatch');
+  process.exit(1);
+}
+
+// Verify custom developer IDs are preserved
+const elena = storage.getUserById('DEV-101');
+if (elena && elena.name === 'Elena Rostova' && elena.experienceLevel === 'Senior' && elena.skills.includes('CatBoost')) {
+  console.log('✅ PASS: Developer unique ID (DEV-101) and custom fields preserved.');
+} else {
+  console.error('❌ FAIL: Custom developer ID not preserved');
+  process.exit(1);
+}
+
+// Verify rejected records have clear validation reasons and were NOT silently discarded
+if (importReport.rejectedRecords.length === 3) {
+  const badCapacity = importReport.rejectedRecords.find(r => r.name.includes('Bad Capacity'));
+  if (badCapacity && badCapacity.reasons.some(re => re.includes('weekly capacity'))) {
+    console.log('✅ PASS: Rejection audit confirmed: Invalid records reported with exact reasons without silent discard.');
+  } else {
+    console.error('❌ FAIL: Rejection reasons missing or incorrect');
+    process.exit(1);
+  }
+}
+
+// Test B: Resource Allocation evaluates ALL developers
+const complexTask = storage.saveTask({
+  id: 'TSK-AI-01',
+  projectId: 'PRJ-NEO',
+  sprintId: 'SP-NEO-01',
+  title: 'CatBoost Model Integration',
+  estimatedHours: 16,
+  requiredSkills: ['Python', 'CatBoost']
+});
+
+const fullRecs = storage.recommendDevelopersForTask(complexTask, 'SP-NEO-01');
+console.log(`Candidate recommendations generated for all ${fullRecs.recommendations.length} available developers:`);
+fullRecs.recommendations.forEach((r, idx) => {
+  console.log(`  ${idx + 1}. [${r.developer.id}] ${r.developer.name} (${r.developer.experienceLevel}) -> ${r.totalScore}% match [Skills: ${r.breakdown.skillScore}/50, Load: ${r.breakdown.workloadScore}/30]`);
+});
+
+if (fullRecs.recommendations.length === storage.getDevelopers().length && fullRecs.recommendations[0].developer.id === 'DEV-101') {
+  console.log('✅ PASS: Resource allocation evaluated 100% of available developers and correctly ranked Elena (DEV-101) first.');
+} else {
+  console.error('❌ FAIL: Resource allocation developer ranking mismatch');
+  process.exit(1);
+}
+
+// Test C: Assignment Validation & Project Manager Override Control
+// 1. Valid assignment (Elena has Python, CatBoost, and 40h capacity)
+const validCheck = storage.validateAssignment('TSK-AI-01', 'DEV-101', 'SP-NEO-01');
+if (validCheck.valid && !validCheck.requiresOverride) {
+  console.log('✅ PASS: Valid assignment requires no override.');
+} else {
+  console.error('❌ FAIL: Valid assignment was incorrectly flagged for override');
+  process.exit(1);
+}
+
+// 2. Overload / Skill mismatch assignment (Kyle Reese has only HTML/CSS and is already overloaded)
+const overrideCheck = storage.validateAssignment('TSK-AI-01', devJunior.id, 'SP-NEO-01');
+if (overrideCheck.valid && overrideCheck.requiresOverride && overrideCheck.issues.length >= 1) {
+  console.log(`✅ PASS: Policy exception detected: Assignment requires explicit PM Override (${overrideCheck.issues.length} policy exception(s)).`);
+} else {
+  console.error('❌ FAIL: Policy exception was not flagged for PM override');
+  process.exit(1);
+}
+
+// Test D: Unassigned Developers Explanation
+const unassignedAudit = storage.getUnassignedDevelopersExplanation('PRJ-NEO', 'SP-NEO-01');
+console.log(`Unassigned developers in SP-NEO-01: ${unassignedAudit.length}`);
+unassignedAudit.forEach(u => {
+  console.log(`  - ${u.developer.name}: [${u.statusTag}] ${u.reason}`);
+});
+
+if (unassignedAudit.length > 0 && unassignedAudit.every(u => u.reason.length > 0)) {
+  console.log('✅ PASS: Unassigned developers audit provides transparent reasons without forcing arbitrary assignments.');
+} else {
+  console.error('❌ FAIL: Unassigned developers audit failed');
+  process.exit(1);
+}
+
+// 7. Test Backup, Restore, and Wipe
+console.log('\n--- 7. Testing JSON Backup, Import, and Clean Data Wipe ---');
 const backupJson = storage.exportDataJSON();
 const parsed = JSON.parse(backupJson);
-if (parsed.users.length === 4 && parsed.projects.length === 1 && parsed.tasks.length === 3) {
+if (parsed.users.length === 7 && parsed.projects.length === 1 && parsed.tasks.length === 4) {
   console.log('✅ PASS: JSON Backup export contains all user-entered data.');
 } else {
   console.error('❌ FAIL: Backup export incomplete');
@@ -391,7 +490,7 @@ if (wipedUsers.length === 0 && wipedProjects.length === 0 && wipedTasks.length =
 
 // Restore from backup
 const restoreResult = storage.importDataJSON(backupJson);
-if (restoreResult.success && storage.getUsers().length === 4 && storage.getProjects().length === 1) {
+if (restoreResult.success && storage.getUsers().length === 7 && storage.getProjects().length === 1) {
   console.log('✅ PASS: JSON Backup restore successfully restored state.');
 } else {
   console.error('❌ FAIL: Backup restore failed');
@@ -402,8 +501,8 @@ if (restoreResult.success && storage.getUsers().length === 4 && storage.getProje
 storage.clearAllData();
 console.log('✅ Clean initial state restored for user evaluation.');
 
-// 7. HTTP Server Verification
-console.log('\n--- 7. Testing HTTP Asset Serving ---');
+// 8. HTTP Server Verification
+console.log('\n--- 8. Testing HTTP Asset Serving ---');
 const server = http.createServer((req, res) => {
   let filePath = path.join(__dirname, req.url === '/' ? 'frontend/index.html' : req.url);
   if (!fs.existsSync(filePath)) {

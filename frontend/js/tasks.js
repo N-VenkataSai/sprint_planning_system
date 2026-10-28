@@ -392,15 +392,39 @@ class TasksController {
       return;
     }
 
-    // Check workload warning if assigned
+    // Check workload and skill requirements with PM override control
+    let managerOverride = null;
     if (assigneeId) {
-      const workload = this.storage.calculateDeveloperWorkload(assigneeId, sprintId);
       const dev = this.storage.getUserById(assigneeId);
+      const issues = [];
+      const workload = this.storage.calculateDeveloperWorkload(assigneeId, sprintId);
       const postHours = (workload ? workload.assignedHours : 0) + estimatedHours;
-      if (postHours > (dev.maxWeeklyHours || 40)) {
-        const excess = Math.round((postHours - dev.maxWeeklyHours) * 10) / 10;
-        const proceed = confirm(`⚠️ Developer Capacity Warning: Assigning this task will exceed ${dev.name}'s weekly capacity by ${excess} hours. Save anyway?`);
+      const maxCapacity = dev ? (dev.maxWeeklyHours || 40) : 40;
+
+      if (postHours > maxCapacity) {
+        const excess = Math.round((postHours - maxCapacity) * 10) / 10;
+        issues.push(`Capacity Exceeded: Increases load to ${postHours}h / ${maxCapacity}h (exceeds weekly limit by ${excess}h).`);
+      }
+
+      const skillEval = this.storage.calculateSkillMatch(Array.from(this.activeSkills), dev ? dev.skills : []);
+      if (this.activeSkills.size > 0 && skillEval.matchedSkills.length === 0) {
+        issues.push(`Skill Requirement Not Met: Developer lacks required skills [${Array.from(this.activeSkills).join(', ')}].`);
+      }
+
+      if (issues.length > 0) {
+        const proceed = confirm(
+          `⚠️ Project Manager Authorization Override Required\n\n` +
+          `Assigning this task to ${dev.name} has the following policy exceptions:\n\n` +
+          issues.map((iss, i) => `  ${i + 1}. ${iss}`).join('\n') +
+          `\n\nDo you want to explicitly authorize this allocation override?`
+        );
         if (!proceed) return;
+
+        managerOverride = {
+          authorizedAt: new Date().toISOString(),
+          authorizedBy: this.auth.getCurrentUser()?.name || 'Project Manager',
+          reasons: issues
+        };
       }
     }
 
@@ -417,6 +441,7 @@ class TasksController {
       estimatedHours,
       deadline,
       assigneeId,
+      managerOverride,
       requiredSkills: Array.from(this.activeSkills)
     };
 

@@ -124,7 +124,10 @@
           <h2 class="card-title">👥 User Management &amp; Skill Profiles</h2>
           <p class="card-description">Configure user roles, skill tags, and maximum weekly capacity limits for resource allocation</p>
         </div>
-        <button class="btn btn-sm btn-primary" onclick="window.adminController.openAddUserModal()">+ Add User</button>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button class="btn btn-sm btn-secondary" onclick="window.adminController.openImportDevModal()">📥 Import Developers Dataset</button>
+          <button class="btn btn-sm btn-primary" onclick="window.adminController.openAddUserModal()">+ Add User</button>
+        </div>
       </div>
 
       <!-- User Filters -->
@@ -163,6 +166,21 @@
             <!-- Dynamic user rows -->
           </tbody>
         </table>
+      </div>
+
+      <!-- User Pagination Controls -->
+      <div id="user-pagination-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-top: 1px solid var(--border-subtle); font-size: 0.8125rem;">
+        <div id="user-pagination-info" style="color: var(--text-muted);">Showing 0-0 of 0 users</div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <label style="color: var(--text-muted); font-size: 0.75rem;">Per page:</label>
+          <select id="user-page-size" class="form-control" style="width: auto; padding: 0.2rem 0.5rem; font-size: 0.75rem;" onchange="window.adminController.handlePageSizeChange(this.value)">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="all">All</option>
+          </select>
+          <div id="user-pagination-buttons" style="display: flex; gap: 0.25rem;"></div>
+        </div>
       </div>
     </section>
 
@@ -257,6 +275,51 @@
           <button type="submit" class="btn btn-primary">Save User Profile</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Import Developer Dataset Modal -->
+  <div class="modal-backdrop" id="import-dev-modal">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📥 Import Developer Dataset (CSV / JSON)</h3>
+        <button type="button" class="modal-close" onclick="window.adminController.closeImportDevModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          Import real developer records from CSV or JSON. Every record is validated line-by-line. Duplicate emails/IDs and incomplete records will be audited and reported below.
+        </p>
+
+        <div style="background-color: var(--slate-50); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.75rem; font-size: 0.75rem; margin-bottom: 1rem;">
+          <strong style="color: var(--slate-900);">Supported Columns (CSV with header):</strong><br>
+          <code style="font-size: 0.75rem;">name, email, role, title, experienceLevel, skills, maxWeeklyHours, id, assignedProjects</code><br>
+          <span style="color: var(--text-muted); font-size: 0.7rem;">Example: <code>Marcus Wright, marcus@co.org, developer, Senior Backend, Senior, "Docker, Node.js, PostgreSQL", 40, DEV-101, PRJ-001</code></span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="import-dev-file">Upload File (.csv or .json)</label>
+          <input type="file" id="import-dev-file" class="form-control" accept=".csv, .json, text/csv, application/json" onchange="window.adminController.handleFileSelected(this)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="import-dev-project">Associate with Project (Optional)</label>
+          <select id="import-dev-project" class="form-control">
+            <option value="">-- No direct project association (Global) --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="import-dev-textarea">Or Paste Raw CSV / JSON Data</label>
+          <textarea id="import-dev-textarea" class="form-control" rows="5" placeholder="name,email,title,experienceLevel,skills,maxWeeklyHours&#10;Marcus Wright,marcus@co.org,Senior Backend,Senior,&quot;Docker, Node.js&quot;,40"></textarea>
+        </div>
+
+        <!-- Validation Results Report Panel -->
+        <div id="import-dev-results" style="display: none; margin-top: 1rem;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.adminController.closeImportDevModal()">Close</button>
+        <button type="button" class="btn btn-primary" onclick="window.adminController.processDeveloperImport()">Validate &amp; Import Records</button>
+      </div>
     </div>
   </div>
 
