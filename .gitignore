@@ -6,24 +6,54 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Node / JS dependencies (if used later)
+# Node / JS dependencies
 node_modules/
 
-# Java / Spring Boot artifacts (for later backend phase)
+# Java / Spring Boot artifacts (for backend phase)
 target/
 *.class
 *.jar
 *.war
 
-# Python / ML artifacts (for later ML phase)
+# Python / ML virtual environments & cache
 __pycache__/
 *.py[cod]
 *$py.class
 .venv/
 venv/
 ENV/
+.pytest_cache/
+
+# ML Confidential Datasets, Processed Data & Model Artifacts
+# Protect raw user datasets uploaded to ml-service/data/
+**/ml-service/data/*
+!**/ml-service/data/.gitkeep
+
+# Protect transformed and preprocessed data
+**/ml-service/processed-data/*
+!**/ml-service/processed-data/.gitkeep
+
+# Protect trained model binaries and evaluation artifacts
+**/ml-service/models/*
+!**/ml-service/models/.gitkeep
+
+# Data file extensions (prevent accidental commit of confidential datasets)
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.feather
+*.h5
+*.hdf5
+
+# Machine Learning model binaries
 *.joblib
 *.pkl
+*.pickle
+*.cbm
+*.bin
+*.model
+*.onnx
 
 # IDE and Editor configurations
 .idea/
@@ -31,6 +61,9 @@ ENV/
 *.swp
 *.swo
 
-# Environment variables & secrets
+# Environment variables, credentials & secrets
 .env
-.env.local
+.env.*
+*.secret
+*.pem
+*.key
