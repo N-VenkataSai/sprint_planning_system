@@ -264,7 +264,11 @@ class ManagerController {
     if (!container) return;
 
     const activeSprint = this.storage.getActiveSprint(project.id);
-    const developers = this.storage.getDevelopers();
+    let developers = this.storage.getDevelopers();
+    if (project.teamMemberIds && project.teamMemberIds.length > 0) {
+      const teamDevs = developers.filter(dev => project.teamMemberIds.includes(dev.id));
+      if (teamDevs.length > 0) developers = teamDevs;
+    }
 
     if (developers.length === 0) {
       container.innerHTML = `
@@ -376,7 +380,10 @@ class ManagerController {
             ${assignee ? `
               <div style="display: flex; align-items: center; gap: 0.35rem;">
                 <div class="user-avatar" style="width: 1.5rem; height: 1.5rem; font-size: 0.625rem;">${assignee.avatar}</div>
-                <span style="font-size: 0.8125rem;">${assignee.name}</span>
+                <div>
+                  <span style="font-size: 0.8125rem;">${assignee.name}</span>
+                  ${task.managerOverride ? `<div style="font-size: 0.65rem; color: #b45309;" title="PM Override Authorized: ${(task.managerOverride.reasons || []).join('; ')}">⚠️ PM Override</div>` : ''}
+                </div>
               </div>
             ` : '<span style="font-size: 0.8125rem; color: var(--text-muted);">Unassigned</span>'}
           </td>

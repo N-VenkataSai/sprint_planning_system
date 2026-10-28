@@ -559,6 +559,15 @@ class TasksController {
           <div style="font-size: 0.8125rem; color: var(--slate-700);">
             Weekly Load: <strong>${workload.assignedHours}h / ${workload.maxCapacity}h (${workload.utilizationPercent}%)</strong>
           </div>
+          ${task.managerOverride ? `
+            <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: var(--radius-xs); padding: 0.5rem; margin-top: 0.65rem; font-size: 0.75rem; color: #92400e;">
+              <strong>⚠️ Project Manager Authorized Override:</strong>
+              <div style="margin-top: 0.2rem;">Authorized by <em>${task.managerOverride.authorizedBy}</em> on ${new Date(task.managerOverride.authorizedAt).toLocaleDateString()}</div>
+              <ul style="margin-left: 1.1rem; margin-top: 0.25rem; margin-bottom: 0;">
+                ${(task.managerOverride.reasons || []).map(r => `<li>${r}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
         `;
       } else {
         assigneeCard.innerHTML = `

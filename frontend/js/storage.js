@@ -49,7 +49,9 @@ class StorageManager {
   saveState(state) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      window.dispatchEvent(new CustomEvent('appDataChanged', { detail: { state } }));
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('appDataChanged', { detail: { state } }));
+      }
       return true;
     } catch (e) {
       console.error('Error saving state to LocalStorage:', e);

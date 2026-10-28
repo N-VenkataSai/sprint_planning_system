@@ -111,7 +111,7 @@ class DeveloperController {
     let totalHoursLogged = 0;
     tasks.forEach(t => {
       (t.workLogs || []).forEach(wl => {
-        if (wl.loggedBy === dev.id) {
+        if (wl.loggedBy === dev.id || !wl.loggedBy) {
           totalHoursLogged += (parseFloat(wl.hours) || 0);
         }
       });
