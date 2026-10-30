@@ -109,6 +109,8 @@ class AdminController {
           </td>
           <td>
             <div style="display: flex; gap: 0.35rem;">
+              <a href="manager.html?projectId=${p.id}" class="btn btn-sm btn-secondary" title="Open PM Task Backlog">📋 Tasks</a>
+              <a href="sprint-planning.html?projectId=${p.id}" class="btn btn-sm btn-secondary" title="Open Sprint Planning">🎯 Sprints</a>
               <a href="create-project.html?id=${p.id}" class="btn btn-sm btn-secondary" title="Edit Project">✏️</a>
               ${isArchived ? `
                 <button class="btn btn-sm btn-secondary" title="Restore Project" onclick="window.adminController.restoreProject('${p.id}')">♻️</button>

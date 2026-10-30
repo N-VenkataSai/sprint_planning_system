@@ -43,14 +43,17 @@ class NavigationManager {
     let navLinksHtml = '';
     if (currentUser.role === 'admin') {
       navLinksHtml = `
-        <li><a href="admin.html" class="nav-link ${activePageKey === 'admin' ? 'active' : ''}">📊 Admin Dashboard</a></li>
-        <li><a href="create-project.html" class="nav-link ${activePageKey === 'create-project' ? 'active' : ''}">➕ New Project</a></li>
+        <li><a href="admin.html" class="nav-link ${activePageKey === 'admin' ? 'active' : ''}">👑 Admin Center</a></li>
+        <li><a href="manager.html" class="nav-link ${activePageKey === 'manager' ? 'active' : ''}">📋 PM Backlog</a></li>
+        <li><a href="sprint-planning.html" class="nav-link ${activePageKey === 'sprint-planning' ? 'active' : ''}">🎯 Sprints &amp; Allocation</a></li>
+        <li><a href="developer.html" class="nav-link ${activePageKey === 'developer' ? 'active' : ''}">💻 Dev Board</a></li>
         <li><a href="analytics.html" class="nav-link ${activePageKey === 'analytics' ? 'active' : ''}">📈 Analytics</a></li>
       `;
     } else if (currentUser.role === 'manager') {
       navLinksHtml = `
         <li><a href="manager.html" class="nav-link ${activePageKey === 'manager' ? 'active' : ''}">📋 PM Dashboard</a></li>
         <li><a href="sprint-planning.html" class="nav-link ${activePageKey === 'sprint-planning' ? 'active' : ''}">🎯 Sprint Planning</a></li>
+        <li><a href="developer.html" class="nav-link ${activePageKey === 'developer' ? 'active' : ''}">💻 Dev Board</a></li>
         <li><a href="create-task.html" class="nav-link ${activePageKey === 'create-task' ? 'active' : ''}">➕ New Task</a></li>
         <li><a href="analytics.html" class="nav-link ${activePageKey === 'analytics' ? 'active' : ''}">📈 Analytics</a></li>
       `;
@@ -59,7 +62,7 @@ class NavigationManager {
       navLinksHtml = `
         <li><a href="developer.html" class="nav-link ${activePageKey === 'developer' ? 'active' : ''}">💻 My Tasks</a></li>
         <li><a href="sprint-planning.html" class="nav-link ${activePageKey === 'sprint-planning' ? 'active' : ''}">🎯 Sprint Scope</a></li>
-        <li><a href="analytics.html" class="nav-link ${activePageKey === 'analytics' ? 'active' : ''}">📈 Project Metrics</a></li>
+        <li><a href="analytics.html" class="nav-link ${activePageKey === 'analytics' ? 'active' : ''}">📈 Analytics</a></li>
       `;
     }
 
