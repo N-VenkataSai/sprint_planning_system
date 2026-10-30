@@ -813,52 +813,207 @@ class StorageManager {
   }
 
   /**
-   * Rule 3: Transparent Developer Recommendation Engine
-   * Evaluates registered team members based on verified inputs:
-   * - Skill Compatibility (0 - 50 pts)
-   * - Remaining Capacity / Availability (0 - 30 pts; 0 if overloaded)
-   * - Experience Level (0 - 20 pts)
+   * Rule 3: Intelligent Developer Recommendation Engine (5-Factor Normalized Multi-Criteria)
+   *
+   * Nominal Weights:
+   * 1. Skill Compatibility: 40%
+   * 2. Experience Compatibility: 20%
+   * 3. Availability: 20%
+   * 4. Workload Balance: 15%
+   * 5. Historical Performance: 5%
+   *
+   * Dynamic Normalization:
+   * If any criterion is unavailable (e.g. historical performance in a fresh system),
+   * value is NOT invented. Weights are dynamically re-normalized among available criteria,
+   * and missing data is explicitly disclosed in the recommendation output.
    */
+  calculateDeveloperHistoricalPerformance(developerId) {
+    const state = this.getState();
+    const completedTasks = (state.tasks || []).filter(t => t.assigneeId === developerId && t.status === 'Done');
+    if (completedTasks.length === 0) {
+      return {
+        available: false,
+        completedCount: 0,
+        onTimeCount: 0,
+        onTimeRate: null,
+        scorePoints: 0,
+        maxScorePoints: 5,
+        reason: 'No completed tasks recorded in system history for this developer.'
+      };
+    }
+
+    let onTimeCount = 0;
+    completedTasks.forEach(t => {
+      if (!t.deadline) {
+        onTimeCount++;
+      } else {
+        const dDate = new Date(t.deadline);
+        const uDate = new Date(t.updatedAt || t.createdAt);
+        if (uDate <= dDate) onTimeCount++;
+      }
+    });
+
+    const onTimeRate = onTimeCount / completedTasks.length;
+    const scorePoints = Math.round(onTimeRate * 5 * 10) / 10;
+    return {
+      available: true,
+      completedCount: completedTasks.length,
+      onTimeCount,
+      onTimeRate: Math.round(onTimeRate * 100),
+      scorePoints,
+      maxScorePoints: 5,
+      reason: `Historical performance: ${completedTasks.length} tasks completed (${Math.round(onTimeRate * 100)}% on-time).`
+    };
+  }
+
   recommendDevelopersForTask(task, sprintId = null) {
     const allDevs = this.getDevelopers();
     if (allDevs.length === 0) {
       return {
         recommendations: [],
+        topRecommendations: [],
+        allRankedCandidates: [],
         hasData: false,
+        totalEligible: 0,
         message: 'No registered developers available in system. Add developers to generate recommendations.'
       };
     }
 
-    const taskEstHours = parseFloat(task.estimatedHours) || 0;
+    const taskEstHours = parseFloat(task.estimatedHours) || 8;
     const targetSprintId = sprintId || task.sprintId;
+    const taskPriority = (task.priority || 'Medium').toLowerCase();
+    const taskPoints = parseInt(task.storyPoints) || 3;
 
     const list = allDevs.map(dev => {
-      // 1. Skill evaluation
-      const skillEval = this.calculateSkillMatch(task.requiredSkills, dev.skills);
+      const disclosures = [];
 
-      // 2. Workload & Availability evaluation
-      const workload = this.calculateDeveloperWorkload(dev.id, targetSprintId);
-      const currentAssigned = workload ? workload.assignedHours : 0;
-      const projectedLoad = currentAssigned + taskEstHours;
-      const capacity = dev.maxWeeklyHours || 40;
-      const willExceed = capacity > 0 && projectedLoad > capacity;
+      // 1. Skill evaluation (nominal weight 40%)
+      const reqSkills = task.requiredSkills || [];
+      const devSkillsUpper = (dev.skills || []).map(s => String(s).trim().toUpperCase());
+      let matchedSkills = [];
+      let missingSkills = [];
+      let skillMatchPercent = 100;
+      let rawSkillScore = 40; // 0-40
 
-      let workloadScore = 0;
-      if (willExceed) {
-        workloadScore = 0; // Overload penalty
-      } else if (capacity > 0) {
-        const availableRatio = Math.max(0, 1 - (projectedLoad / capacity));
-        workloadScore = Math.round(availableRatio * 30);
+      if (reqSkills.length > 0) {
+        matchedSkills = reqSkills.filter(req => devSkillsUpper.includes(String(req).trim().toUpperCase()));
+        missingSkills = reqSkills.filter(req => !devSkillsUpper.includes(String(req).trim().toUpperCase()));
+        skillMatchPercent = Math.round((matchedSkills.length / reqSkills.length) * 100);
+        rawSkillScore = (matchedSkills.length / reqSkills.length) * 40;
+      } else {
+        disclosures.push('Task has no technical skill prerequisites specified; 100% skill compatibility awarded.');
       }
 
-      // 3. Experience level weighting
-      let experienceScore = 15;
-      if (dev.experienceLevel === 'Senior') experienceScore = 20;
-      else if (dev.experienceLevel === 'Mid') experienceScore = 15;
-      else if (dev.experienceLevel === 'Junior') experienceScore = 10;
+      // 2. Experience compatibility (nominal weight 20%)
+      let rawExpScore = 15;
+      let expSuitabilityDesc = '';
+      const expLevel = dev.experienceLevel || 'Mid';
 
-      const totalScore = Math.min(100, skillEval.scorePoints + workloadScore + experienceScore);
+      const isHighComplexity = taskPriority === 'critical' || taskPriority === 'high' || taskPoints >= 8 || taskEstHours >= 24;
+      const isLowComplexity = taskPriority === 'low' || (taskPoints <= 2 && taskEstHours <= 8);
 
+      if (isHighComplexity) {
+        if (expLevel === 'Senior') {
+          rawExpScore = 20;
+          expSuitabilityDesc = 'High - Senior profile is optimal for complex/critical architectural delivery.';
+        } else if (expLevel === 'Mid') {
+          rawExpScore = 14;
+          expSuitabilityDesc = 'Moderate - Mid-level developer capable; senior review recommended for critical paths.';
+        } else {
+          rawExpScore = 8;
+          expSuitabilityDesc = 'Low - Junior profile carries elevated risk for critical/high-complexity tasks.';
+        }
+      } else if (isLowComplexity) {
+        if (expLevel === 'Junior') {
+          rawExpScore = 20;
+          expSuitabilityDesc = 'High - Junior profile is optimal for focused, well-defined tasks.';
+        } else if (expLevel === 'Mid') {
+          rawExpScore = 18;
+          expSuitabilityDesc = 'High - Mid-level developer will execute quickly with high reliability.';
+        } else {
+          rawExpScore = 15;
+          expSuitabilityDesc = 'Moderate - Senior developer is overqualified; resource efficiency could be optimized.';
+        }
+      } else {
+        // Medium complexity (default)
+        if (expLevel === 'Mid') {
+          rawExpScore = 20;
+          expSuitabilityDesc = 'Optimal - Mid-level developer matches standard sprint story scope.';
+        } else if (expLevel === 'Senior') {
+          rawExpScore = 19;
+          expSuitabilityDesc = 'High - Senior developer brings high competency with minimal risk.';
+        } else {
+          rawExpScore = 13;
+          expSuitabilityDesc = 'Moderate - Junior developer can complete task with standard peer review.';
+        }
+      }
+
+      if (dev.yearsExperience !== undefined && dev.yearsExperience !== null) {
+        disclosures.push(`Experience verified with ${dev.yearsExperience} recorded year(s) of professional experience.`);
+      }
+
+      // 3. Availability (nominal weight 20%)
+      const workload = this.calculateDeveloperWorkload(dev.id, targetSprintId);
+      const currentAssigned = workload ? workload.assignedHours : 0;
+      const capacity = dev.maxWeeklyHours || 40;
+      const remainingHours = Math.max(0, capacity - currentAssigned);
+      const projectedLoad = currentAssigned + taskEstHours;
+      const willExceed = capacity > 0 && projectedLoad > capacity;
+      const excessHours = willExceed ? Math.round((projectedLoad - capacity) * 10) / 10 : 0;
+
+      let rawAvailScore = 0;
+      if (willExceed) {
+        rawAvailScore = 0; // Exceeded capacity
+      } else if (capacity > 0) {
+        const bufferRatio = Math.max(0, (capacity - projectedLoad) / capacity);
+        rawAvailScore = Math.round((0.5 + 0.5 * bufferRatio) * 20 * 10) / 10;
+      }
+
+      // 4. Workload balance (nominal weight 15%)
+      let rawWorkloadScore = 0;
+      const utilization = capacity > 0 ? (currentAssigned / capacity) : 0;
+      if (currentAssigned === 0) {
+        rawWorkloadScore = 15; // 0 current load: highest balancing priority
+      } else if (utilization <= 0.4) {
+        rawWorkloadScore = 13;
+      } else if (utilization <= 0.7) {
+        rawWorkloadScore = 10;
+      } else if (utilization <= 0.9) {
+        rawWorkloadScore = 6;
+      } else if (utilization <= 1.0) {
+        rawWorkloadScore = 3;
+      } else {
+        rawWorkloadScore = 0; // Overloaded
+      }
+
+      // 5. Historical performance (nominal weight 5%)
+      const hist = this.calculateDeveloperHistoricalPerformance(dev.id);
+      let rawHistScore = 0;
+      const isHistAvailable = hist.available;
+
+      if (isHistAvailable) {
+        rawHistScore = hist.scorePoints;
+      } else {
+        disclosures.push('Historical completion performance unrecorded in records; 5% weight dynamically redistributed across other 4 criteria.');
+      }
+
+      // Dynamic Re-normalization calculation
+      let nominalTotalAvailable = 40 + 20 + 20 + 15; // 95
+      if (isHistAvailable) nominalTotalAvailable += 5; // 100
+
+      const multiplier = 100 / nominalTotalAvailable;
+      const weightsApplied = {
+        skills: Math.round((40 * multiplier) * 10) / 10,
+        experience: Math.round((20 * multiplier) * 10) / 10,
+        availability: Math.round((20 * multiplier) * 10) / 10,
+        workload: Math.round((15 * multiplier) * 10) / 10,
+        historicalPerformance: isHistAvailable ? Math.round((5 * multiplier) * 10) / 10 : 0
+      };
+
+      const rawSum = rawSkillScore + rawExpScore + rawAvailScore + rawWorkloadScore + (isHistAvailable ? rawHistScore : 0);
+      const totalScore = Math.min(100, Math.max(0, Math.round(rawSum * multiplier)));
+
+      // Recommendation label & badge
       let recommendationLabel = 'Not Recommended';
       let matchBadge = 'danger';
       if (willExceed) {
@@ -875,37 +1030,288 @@ class StorageManager {
         matchBadge = 'low';
       }
 
+      // Recommendation reasons
+      const recommendationReasons = [];
+      if (skillMatchPercent === 100 && reqSkills.length > 0) {
+        recommendationReasons.push(`Complete skill compatibility (100% match: ${matchedSkills.join(', ')})`);
+      } else if (skillMatchPercent > 0) {
+        recommendationReasons.push(`${skillMatchPercent}% skill match (${matchedSkills.length}/${reqSkills.length} required skills)`);
+      }
+      recommendationReasons.push(expSuitabilityDesc);
+      if (!willExceed && remainingHours >= taskEstHours) {
+        recommendationReasons.push(`Sufficient capacity buffer (${remainingHours}h available vs ${taskEstHours}h required)`);
+      }
+      if (currentAssigned === 0) {
+        recommendationReasons.push('Developer currently has zero assigned tasks; prioritizes workload balance.');
+      }
+
+      // Potential assignment risks
+      const potentialRisks = [];
+      if (willExceed) {
+        potentialRisks.push(`Capacity Overload: Assigning this task exceeds safe weekly limit by ${excessHours}h (${projectedLoad}h / ${capacity}h)`);
+      } else if (projectedLoad / capacity >= 0.85) {
+        potentialRisks.push(`High Utilization: Workload will reach ${Math.round((projectedLoad / capacity) * 100)}% of weekly limit`);
+      }
+      if (missingSkills.length > 0) {
+        potentialRisks.push(`Skill Gap: Lacks verified proficiency in: ${missingSkills.join(', ')}`);
+      }
+      if (isHighComplexity && expLevel === 'Junior') {
+        potentialRisks.push('Experience Mismatch: Junior profile assigned to critical/high-complexity task');
+      }
+
       return {
         developer: dev,
+        developerId: dev.id,
+        developerName: dev.name,
+        jobTitle: dev.title,
+        experienceLevel: expLevel,
         totalScore,
+        overallMatchScore: totalScore,
+        skillMatchPercent,
+        matchedSkills,
+        missingSkills,
+        experienceSuitability: expSuitabilityDesc,
+        availableWorkingHours: remainingHours,
+        currentWorkloadHours: currentAssigned,
+        maxWeeklyHours: capacity,
+        willExceedCapacity: willExceed,
+        excessHours,
         recommendationLabel,
         matchBadge,
+        recommendationReasons,
+        potentialRisks,
+        notRecommendedReasons: [],
+        weightsApplied,
+        disclosures,
         breakdown: {
-          skillScore: skillEval.scorePoints,
+          // New 5-factor normalized fields
+          skillCompatibilityScore: Math.round(rawSkillScore * multiplier * 10) / 10,
+          experienceSuitabilityScore: Math.round(rawExpScore * multiplier * 10) / 10,
+          availabilityScore: Math.round(rawAvailScore * multiplier * 10) / 10,
+          workloadBalanceScore: Math.round(rawWorkloadScore * multiplier * 10) / 10,
+          historicalPerformanceScore: isHistAvailable ? Math.round(rawHistScore * multiplier * 10) / 10 : 0,
+
+          // Backward-compatible fields for test-suite & existing views
+          skillScore: Math.round((skillMatchPercent / 100) * 50),
           maxSkillScore: 50,
-          skillPercent: skillEval.matchPercent,
-          matchedSkills: skillEval.matchedSkills,
-          missingSkills: skillEval.missingSkills,
-          hasSkillRequirements: skillEval.hasRequirements,
-          workloadScore,
+          workloadScore: willExceed ? 0 : Math.round(Math.max(0, 1 - (projectedLoad / capacity)) * 30),
           maxWorkloadScore: 30,
+          experienceScore: expLevel === 'Senior' ? 20 : (expLevel === 'Mid' ? 15 : 10),
+          maxExperienceScore: 20,
+
+          skillPercent: skillMatchPercent,
+          matchedSkills,
+          missingSkills,
+          hasSkillRequirements: reqSkills.length > 0,
           currentLoadHours: currentAssigned,
           capacityHours: capacity,
           projectedLoadHours: Math.round(projectedLoad * 10) / 10,
           willExceedCapacity: willExceed,
-          excessHours: willExceed ? Math.round((projectedLoad - capacity) * 10) / 10 : 0,
-          experienceScore,
-          maxExperienceScore: 20,
-          experienceLevel: dev.experienceLevel
+          excessHours,
+          experienceLevel: expLevel
         }
       };
     });
 
-    list.sort((a, b) => b.totalScore - a.totalScore);
+    // Sort by overall match score descending; tie-break on lower current workload, then higher skill match %
+    list.sort((a, b) => {
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      if (a.currentWorkloadHours !== b.currentWorkloadHours) return a.currentWorkloadHours - b.currentWorkloadHours;
+      return b.skillMatchPercent - a.skillMatchPercent;
+    });
+
+    // Assign rank and document reasons why candidates below rank 1 were ranked lower
+    const topCand = list[0];
+    list.forEach((cand, idx) => {
+      cand.rank = idx + 1;
+      if (idx > 0 && topCand) {
+        const notRecReasons = [];
+        if (cand.willExceedCapacity) {
+          notRecReasons.push(`Exceeds weekly capacity limit by ${cand.excessHours} hours`);
+        }
+        if (cand.skillMatchPercent < topCand.skillMatchPercent) {
+          notRecReasons.push(`Lower skill compatibility (${cand.skillMatchPercent}% vs ${topCand.skillMatchPercent}% for #${topCand.rank})`);
+        }
+        if (cand.currentWorkloadHours > topCand.currentWorkloadHours) {
+          notRecReasons.push(`Higher current assigned workload (${cand.currentWorkloadHours}h vs ${topCand.currentWorkloadHours}h for #${topCand.rank})`);
+        }
+        if (cand.experienceLevel !== topCand.experienceLevel && topCand.experienceLevel === 'Senior') {
+          notRecReasons.push(`Less experience suitability (${cand.experienceLevel} vs Senior)`);
+        }
+        if (notRecReasons.length === 0) {
+          notRecReasons.push(`Marginal score differential (${cand.totalScore}% vs ${topCand.totalScore}%)`);
+        }
+        cand.notRecommendedReasons = notRecReasons;
+      }
+    });
+
+    const topRecommendations = list.slice(0, 3);
+
     return {
       recommendations: list,
+      topRecommendations,
+      allRankedCandidates: list,
+      totalEligible: allDevs.length,
       hasData: true,
-      message: 'Rule-based matching calculation based on entered skills, recorded load, and registered capacity.'
+      algorithmDoc: '5-factor normalized multi-criteria weighting: Skills (40%), Experience (20%), Availability (20%), Workload (15%), Historical Performance (5%) with dynamic redistribution for missing fields.',
+      message: 'Intelligent multi-criteria recommendation evaluated across all eligible developer records.'
+    };
+  }
+
+  /**
+   * Side-by-side Candidate Comparison Helper
+   */
+  compareCandidatesForTask(task, candidateIds = [], sprintId = null) {
+    const recResult = this.recommendDevelopersForTask(task, sprintId);
+    if (!recResult.hasData) return null;
+
+    const candidates = candidateIds.length > 0
+      ? recResult.recommendations.filter(c => candidateIds.includes(c.developerId))
+      : recResult.topRecommendations;
+
+    return {
+      task,
+      candidates,
+      metrics: [
+        { label: 'Rank', getValue: c => `#${c.rank}` },
+        { label: 'Overall Match Score', getValue: c => `${c.totalScore}%` },
+        { label: 'Skill Match %', getValue: c => `${c.skillMatchPercent}%` },
+        { label: 'Matched Skills', getValue: c => c.matchedSkills.length > 0 ? c.matchedSkills.join(', ') : 'None' },
+        { label: 'Missing Skills', getValue: c => c.missingSkills.length > 0 ? c.missingSkills.join(', ') : 'None' },
+        { label: 'Experience Level', getValue: c => c.experienceLevel },
+        { label: 'Experience Suitability', getValue: c => c.experienceSuitability },
+        { label: 'Remaining Capacity', getValue: c => `${c.availableWorkingHours}h / ${c.maxWeeklyHours}h` },
+        { label: 'Current Assigned Load', getValue: c => `${c.currentWorkloadHours}h` },
+        { label: 'Overload Status', getValue: c => c.willExceedCapacity ? `⚠️ Overloaded by ${c.excessHours}h` : '✅ Within safe capacity' },
+        { label: 'Key Reasons', getValue: c => c.recommendationReasons.slice(0, 2).join('; ') },
+        { label: 'Potential Risks', getValue: c => c.potentialRisks.length > 0 ? c.potentialRisks.join('; ') : 'None identified' }
+      ]
+    };
+  }
+
+  /**
+   * Save AI-Generated Agile Sprint Plan Atomically
+   */
+  saveAiSprintPlan(planData) {
+    if (!planData || !planData.project || !Array.isArray(planData.sprints) || !Array.isArray(planData.tasks)) {
+      return { success: false, error: 'Invalid plan structure.' };
+    }
+
+    const state = this.getState();
+    const currentUser = this.getCurrentUser();
+
+    // 1. Create Project
+    const prjId = planData.project.id || this._generateId('PRJ');
+    const project = {
+      id: prjId,
+      name: String(planData.project.name || planData.project.title || 'AI Generated Project').trim(),
+      description: String(planData.project.description || planData.project.abstract || '').trim(),
+      originalAbstract: String(planData.project.originalAbstract || planData.project.abstract || planData.project.description || '').trim(),
+      objectives: String(planData.project.objectives || '').trim(),
+      preferredStack: String(planData.project.preferredStack || '').trim(),
+      startDate: planData.project.startDate || new Date().toISOString().split('T')[0],
+      deadline: planData.project.deadline || '',
+      sprintDurationDays: parseInt(planData.project.sprintDurationDays || (planData.project.sprintDurationWeeks ? planData.project.sprintDurationWeeks * 7 : 14)) || 14,
+      status: 'Active',
+      managerId: planData.project.managerId || (currentUser ? currentUser.id : null),
+      teamMemberIds: [],
+      aiGenerated: true,
+      planVersion: 1,
+      approvedAt: new Date().toISOString(),
+      approvedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Project Manager',
+      createdAt: new Date().toISOString()
+    };
+
+    // 2. Create Sprints
+    const savedSprints = [];
+    const sprintIdMap = {}; // tempIndex/tempId -> realSprintId
+
+    planData.sprints.forEach((s, idx) => {
+      const sprintId = this._generateId('SPR');
+      if (s.tempId) sprintIdMap[s.tempId] = sprintId;
+      sprintIdMap[idx] = sprintId;
+
+      const sprintObj = {
+        id: sprintId,
+        projectId: prjId,
+        name: String(s.name || `Sprint ${idx + 1}`).trim(),
+        objective: String(s.objective || '').trim(),
+        startDate: s.startDate || '',
+        endDate: s.endDate || '',
+        capacityHours: parseFloat(s.capacityHours) || 80,
+        status: idx === 0 ? 'Active' : 'Planned',
+        aiGenerated: true,
+        groupingRationale: String(s.groupingRationale || '').trim(),
+        createdAt: new Date().toISOString()
+      };
+      savedSprints.push(sprintObj);
+    });
+
+    // 3. Create Tasks & Map Dependencies
+    const savedTasks = [];
+    const taskIdMap = {}; // tempTaskId -> realTaskId
+    const involvedDevIds = new Set();
+
+    // First pass: assign real IDs
+    planData.tasks.forEach((t) => {
+      const realTaskId = this._generateId('TSK');
+      if (t.tempId || t.id) taskIdMap[t.tempId || t.id] = realTaskId;
+      t._realId = realTaskId;
+    });
+
+    // Second pass: save tasks with resolved dependencies and sprints
+    planData.tasks.forEach((t) => {
+      const realSprintId = sprintIdMap[t.sprintTempId] || sprintIdMap[t.sprintIndex] || (savedSprints[0] ? savedSprints[0].id : null);
+      const mappedDependencies = (t.dependencies || []).map(depId => taskIdMap[depId] || depId);
+
+      if (t.assigneeId) {
+        involvedDevIds.add(t.assigneeId);
+      }
+
+      const taskObj = {
+        id: t._realId,
+        projectId: prjId,
+        sprintId: realSprintId,
+        title: String(t.title).trim(),
+        description: String(t.description || '').trim(),
+        module: String(t.module || 'General').trim(),
+        requiredSkills: Array.isArray(t.requiredSkills) ? t.requiredSkills : [],
+        priority: t.priority || 'Medium',
+        storyPoints: parseInt(t.storyPoints) || 3,
+        estimatedHours: parseFloat(t.estimatedHours) || 8,
+        actualHours: 0,
+        status: 'To Do',
+        dependencies: mappedDependencies,
+        acceptanceCriteria: Array.isArray(t.acceptanceCriteria) ? t.acceptanceCriteria : [],
+        assigneeId: t.assigneeId || null,
+        pmOverride: t.pmOverride || null,
+        aiGenerated: true,
+        manuallyEdited: t.manuallyEdited || false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      savedTasks.push(taskObj);
+    });
+
+    // Update project team members with all assigned developers
+    project.teamMemberIds = Array.from(involvedDevIds);
+
+    // Commit to state
+    state.projects.push(project);
+    savedSprints.forEach(s => state.sprints.push(s));
+    savedTasks.forEach(t => state.tasks.push(t));
+
+    // Set as active project
+    state.session.activeProjectId = prjId;
+
+    this.saveState(state);
+
+    return {
+      success: true,
+      projectId: prjId,
+      project,
+      sprints: savedSprints,
+      tasks: savedTasks
     };
   }
 

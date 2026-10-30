@@ -263,83 +263,123 @@ class TasksController {
       return;
     }
 
+    const top3 = this.showAllCandidates ? recommendations : (recResult.topRecommendations || recommendations.slice(0, 3));
+
     container.innerHTML = `
-      <div class="rec-title-bar">
+      <div class="rec-title-bar" style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
         <div>
-          <span class="rec-badge-label">🤖 Intelligent Matching Engine</span>
-          <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: 0.5rem;">
-            Rule-based ranking: Skills (50%) + Workload/Capacity (30%) + Experience (20%)
+          <span class="rec-badge-label" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">
+            🤖 Feature 1: Top 3 Recommendations
           </span>
+          <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.2rem;">
+            5-Factor Scoring: Skills (40%), Experience (20%), Availability (20%), Workload (15%), Historical (5%)
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.4rem;">
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="window.tasksController.openComparisonModal()">
+            ⚖️ Compare Top 3
+          </button>
+          <button type="button" class="btn btn-sm btn-link" style="font-size: 0.75rem; padding: 0.2rem;" onclick="window.tasksController.toggleShowAllCandidates()">
+            ${this.showAllCandidates ? 'Show Top 3 Only' : `Show All (${recResult.totalEligible})`}
+          </button>
         </div>
       </div>
 
       <div class="rec-candidates-list">
-        ${recommendations.map((rec, index) => {
+        ${top3.map((rec) => {
           const dev = rec.developer;
-          const bd = rec.breakdown;
           const isSelected = currentAssignee === dev.id;
-          const isTop = index === 0 && !bd.willExceedCapacity;
+          const isRank1 = rec.rank === 1 && !rec.willExceedCapacity;
 
           return `
-            <div class="rec-card ${isTop ? 'top-match' : ''}">
+            <div class="rec-card ${isRank1 ? 'top-match' : ''}" style="margin-bottom: 1rem; border-left: 4px solid ${rec.rank === 1 ? 'var(--primary)' : 'var(--slate-300)'};">
+              <!-- Card Header -->
               <div class="rec-card-header">
                 <div class="rec-dev-info">
-                  <div class="user-avatar" style="width: 2.25rem; height: 2.25rem;">${dev.avatar}</div>
+                  <div class="user-avatar" style="width: 2.5rem; height: 2.5rem;">${dev.avatar}</div>
                   <div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                      <span class="badge ${rec.rank === 1 ? 'badge-active' : 'badge-archived'}" style="font-weight: 800;">
+                        RANK #${rec.rank} ${rec.rank === 1 ? '⭐ BEST MATCH' : 'ALTERNATIVE'}
+                      </span>
                       <strong style="font-size: 0.9375rem; color: var(--slate-900);">${dev.name}</strong>
+                      <span class="task-id" style="font-size: 0.6875rem;">[${dev.id}]</span>
                       <span class="badge ${dev.experienceLevel === 'Senior' ? 'badge-priority-high' : 'badge-priority-medium'}">${dev.experienceLevel}</span>
-                      ${isSelected ? `<span class="badge badge-done">Currently Selected</span>` : ''}
-                      ${isTop ? `<span class="badge badge-active">⭐ Best Match</span>` : ''}
+                      ${isSelected ? `<span class="badge badge-done">✓ Currently Selected</span>` : ''}
                     </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">${dev.title}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">
+                      ${dev.title} &bull; ${rec.experienceSuitability}
+                    </div>
                   </div>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                   <div class="rec-score-pill ${rec.matchBadge}">
-                    ${rec.totalScore}%
+                    ${rec.totalScore}% MATCH
                   </div>
-                  <button type="button" class="btn btn-sm ${isSelected ? 'btn-secondary' : 'btn-primary'}" onclick="window.tasksController.selectCandidate('${dev.id}', ${bd.willExceedCapacity}, ${bd.excessHours})">
-                    ${isSelected ? '✓ Assigned' : '👉 Assign'}
+                  <button type="button" class="btn btn-sm ${isSelected ? 'btn-secondary' : 'btn-primary'}" onclick="window.tasksController.selectCandidate('${dev.id}', ${rec.willExceedCapacity}, ${rec.excessHours})">
+                    ${isSelected ? '✓ Assigned' : (rec.willExceedCapacity ? '⚠️ Request Override' : '👉 Select')}
                   </button>
                 </div>
               </div>
 
-              <!-- Recommendation Breakdown Factors -->
-              <div class="rec-breakdown">
-                <div class="rec-factor">
-                  <span class="rec-factor-name">Skill Compatibility:</span>
-                  <span class="rec-factor-val">${bd.skillScore}/${bd.maxSkillScore} pts (${bd.skillPercent}%)</span>
-                  <div style="font-size: 0.6875rem; color: var(--text-muted);">
-                    ${bd.matchedSkills.length > 0 ? `Matches: ${bd.matchedSkills.join(', ')}` : 'No exact match'}
-                  </div>
+              <!-- Skills Comparison -->
+              <div style="margin: 0.65rem 0; font-size: 0.75rem;">
+                <div style="margin-bottom: 0.25rem;">
+                  <strong>Skills Compatibility:</strong> <span style="font-weight: 700; color: ${rec.skillMatchPercent === 100 ? 'var(--success)' : 'var(--slate-800)'};">${rec.skillMatchPercent}%</span>
                 </div>
-
-                <div class="rec-factor">
-                  <span class="rec-factor-name">Capacity & Workload:</span>
-                  <span class="rec-factor-val" style="color: ${bd.willExceedCapacity ? 'var(--danger)' : 'var(--slate-800)'};">
-                    ${bd.workloadScore}/${bd.maxWorkloadScore} pts
-                  </span>
-                  <div style="font-size: 0.6875rem; color: var(--text-muted);">
-                    Load: ${bd.currentLoadHours}h → projected <strong>${bd.projectedLoadHours}h / ${bd.capacityHours}h</strong>
-                  </div>
-                </div>
-
-                <div class="rec-factor">
-                  <span class="rec-factor-name">Experience Weight:</span>
-                  <span class="rec-factor-val">${bd.experienceScore}/${bd.maxExperienceScore} pts</span>
-                  <div style="font-size: 0.6875rem; color: var(--text-muted);">
-                    ${bd.experienceLevel} Level
-                  </div>
+                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                  ${rec.matchedSkills.map(s => `<span class="badge badge-done" style="font-size: 0.625rem;">✓ ${s}</span>`).join('')}
+                  ${rec.missingSkills.map(s => `<span class="badge badge-priority-high" style="font-size: 0.625rem;">✕ ${s} (Missing)</span>`).join('')}
+                  ${rec.matchedSkills.length === 0 && rec.missingSkills.length === 0 ? '<span style="color: var(--text-muted); font-style: italic;">No specific skill prerequisites</span>' : ''}
                 </div>
               </div>
 
-              ${bd.willExceedCapacity ? `
-                <div class="alert alert-danger" style="margin-bottom: 0; padding: 0.5rem 0.75rem; font-size: 0.75rem;">
-                  ⚠️ <strong>Workload Capacity Exceeded:</strong> Assigning this task (+${estHours}h) will put ${dev.name} at ${bd.projectedLoadHours}h / ${bd.capacityHours}h (${Math.round((bd.projectedLoadHours / bd.capacityHours) * 100)}%). This exceeds their safe weekly limit by ${bd.excessHours} hours!
+              <!-- Capacity & Workload Balance -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; background: var(--slate-50); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); margin-bottom: 0.65rem;">
+                <div>
+                  <span style="color: var(--text-muted);">Available Capacity:</span>
+                  <div><strong>${rec.availableWorkingHours}h</strong> remaining / ${rec.maxWeeklyHours}h max</div>
+                </div>
+                <div>
+                  <span style="color: var(--text-muted);">Current Assigned Workload:</span>
+                  <div><strong>${rec.currentWorkloadHours}h</strong> currently booked</div>
+                </div>
+              </div>
+
+              <!-- Recommendation Reasons -->
+              <div style="font-size: 0.75rem; margin-bottom: 0.5rem;">
+                <strong style="color: var(--slate-900);">Why Recommended:</strong>
+                <ul style="margin: 0.2rem 0 0 0; padding-left: 1.25rem; color: var(--slate-700);">
+                  ${rec.recommendationReasons.map(r => `<li>${r}</li>`).join('')}
+                </ul>
+              </div>
+
+              <!-- Potential Risks -->
+              ${rec.potentialRisks.length > 0 ? `
+                <div class="alert alert-danger" style="margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.75rem;">
+                  <strong style="display: block; margin-bottom: 0.2rem;">⚠️ Potential Assignment Risks:</strong>
+                  <ul style="margin: 0; padding-left: 1.25rem;">
+                    ${rec.potentialRisks.map(r => `<li>${r}</li>`).join('')}
+                  </ul>
                 </div>
               ` : ''}
+
+              <!-- Reasons Why Other Candidates Were Ranked Lower (for Rank > 1) -->
+              ${rec.rank > 1 && rec.notRecommendedReasons && rec.notRecommendedReasons.length > 0 ? `
+                <div style="font-size: 0.6875rem; color: var(--text-muted); background: #f8fafc; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1px dashed var(--slate-300);">
+                  ℹ️ <strong>Rank #${rec.rank} Rationale:</strong> ${rec.notRecommendedReasons.join('; ')}
+                </div>
+              ` : ''}
+
+              <!-- Disclosures -->
+              ${rec.disclosures && rec.disclosures.length > 0 ? `
+                <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.35rem; font-style: italic;">
+                  Disclosed: ${rec.disclosures[0]}
+                </div>
+              ` : ''}
+
             </div>
           `;
         }).join('')}
@@ -347,12 +387,104 @@ class TasksController {
     `;
   }
 
+  toggleShowAllCandidates() {
+    this.showAllCandidates = !this.showAllCandidates;
+    this.triggerRecommendationCalculation();
+  }
+
+  openComparisonModal() {
+    const estHours = parseFloat(document.getElementById('task-est-hours')?.value) || 8;
+    const sprintId = document.getElementById('task-sprint')?.value || null;
+    const projectId = document.getElementById('task-project')?.value || this.storage.getActiveProjectId();
+
+    const draftTask = {
+      projectId,
+      sprintId,
+      estimatedHours: estHours,
+      requiredSkills: Array.from(this.activeSkills)
+    };
+
+    const compData = this.storage.compareCandidatesForTask(draftTask, [], sprintId);
+    if (!compData || compData.candidates.length === 0) {
+      this.auth.showToast('No candidates available to compare.', 'info');
+      return;
+    }
+
+    let modal = document.getElementById('task-candidate-comparison-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'task-candidate-comparison-modal';
+      modal.className = 'modal';
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">⚖️ Compare Top 3 Recommended Developers</h3>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.8125rem; color: var(--text-muted);">
+              Side-by-side evaluation across skills, experience, availability, and workload balance.
+            </p>
+          </div>
+          <button class="modal-close" onclick="document.getElementById('task-candidate-comparison-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+            ${compData.candidates.map(cand => `
+              <div class="card" style="border-top: 4px solid ${cand.rank === 1 ? 'var(--primary)' : 'var(--slate-300)'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <span class="badge ${cand.rank === 1 ? 'badge-active' : 'badge-archived'}">RANK #${cand.rank}</span>
+                  <span class="rec-score-pill ${cand.matchBadge}">${cand.totalScore}% MATCH</span>
+                </div>
+                <h4 style="margin: 0; font-size: 1.1rem; color: var(--slate-900);">${cand.developerName}</h4>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">${cand.jobTitle} &bull; ${cand.experienceLevel}</div>
+
+                <div style="font-size: 0.8125rem; margin-bottom: 0.5rem;">
+                  <strong>Skills:</strong> ${cand.matchedSkills.length > 0 ? cand.matchedSkills.join(', ') : 'No exact match'}
+                </div>
+                ${cand.missingSkills.length > 0 ? `
+                  <div style="font-size: 0.8125rem; color: var(--danger); margin-bottom: 0.5rem;">
+                    <strong>Missing:</strong> ${cand.missingSkills.join(', ')}
+                  </div>
+                ` : ''}
+
+                <div style="font-size: 0.8125rem; margin-bottom: 0.5rem;">
+                  <strong>Capacity:</strong> ${cand.availableWorkingHours}h avail / ${cand.maxWeeklyHours}h limit
+                </div>
+                <div style="font-size: 0.8125rem; margin-bottom: 0.75rem;">
+                  <strong>Workload:</strong> ${cand.currentWorkloadHours}h currently assigned
+                </div>
+
+                <div class="alert alert-info" style="font-size: 0.75rem; padding: 0.5rem; margin-bottom: 0.75rem;">
+                  ${cand.recommendationReasons.slice(0, 2).map(r => `<div>&bull; ${r}</div>`).join('')}
+                </div>
+
+                ${cand.potentialRisks.length > 0 ? `
+                  <div class="alert alert-danger" style="font-size: 0.75rem; padding: 0.5rem; margin-bottom: 0.75rem;">
+                    ${cand.potentialRisks.map(r => `<div>${r}</div>`).join('')}
+                  </div>
+                ` : ''}
+
+                <button type="button" class="btn btn-sm ${cand.rank === 1 ? 'btn-primary' : 'btn-secondary'}" style="width: 100%;" onclick="window.tasksController.selectCandidate('${cand.developerId}', ${cand.willExceedCapacity}, ${cand.excessHours}); document.getElementById('task-candidate-comparison-modal').style.display='none';">
+                  Select Candidate #${cand.rank} &rarr;
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    modal.style.display = 'flex';
+  }
+
   selectCandidate(developerId, willExceed, excessHours) {
     const select = document.getElementById('task-assignee');
     if (!select) return;
 
     if (willExceed) {
-      const confirmAssign = confirm(`⚠️ Workload Warning: This developer will exceed their weekly capacity by ${excessHours} hours. Over-allocation can risk sprint commitments. Do you want to proceed with this assignment?`);
+      const confirmAssign = confirm(`⚠️ Workload Warning: This developer will exceed their safe weekly capacity by ${excessHours} hours. An explicit Project Manager override will be recorded upon save. Do you want to select this developer?`);
       if (!confirmAssign) return;
     }
 

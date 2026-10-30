@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Sprint Generator - SprintAlloc</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    .generator-hero {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+      color: #fff;
+      padding: 2.25rem 2rem;
+      border-radius: var(--radius-xl);
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .generator-hero::after {
+      content: '⚡';
+      position: absolute;
+      right: 2rem;
+      bottom: -1rem;
+      font-size: 8rem;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+    .generator-hero h1 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin: 0 0 0.5rem 0;
+      color: #fff;
+    }
+    .generator-hero p {
+      color: #c7d2fe;
+      font-size: 0.9375rem;
+      max-width: 720px;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .pipeline-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-md);
+    }
+    .pipeline-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .pipeline-step {
+      padding: 0.875rem;
+      border-radius: var(--radius-md);
+      background: var(--slate-50);
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+    }
+    .pipeline-step.active {
+      background: #eef2ff;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+    .pipeline-step.done {
+      background: #f0fdf4;
+      border-color: #22c55e;
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      background: var(--slate-300);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .pipeline-step.active .step-num { background: #6366f1; }
+    .pipeline-step.done .step-num { background: #22c55e; }
+    .step-title { font-weight: 700; font-size: 0.8125rem; color: var(--slate-900); }
+    .step-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Dynamic Navigation Mount -->
+  <div id="navbar-container"></div>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Hero Header -->
+    <header class="generator-hero">
+      <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255, 255, 255, 0.15); padding: 0.25rem 0.75rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; backdrop-filter: blur(4px);">
+        <span>🤖 FEATURE 2</span> &bull; <span>AGILE INTELLIGENCE</span>
+      </div>
+      <h1>AI-Powered Automatic Sprint Generation</h1>
+      <p>
+        Transform a project abstract into a complete, structured development plan with requirement decomposition,
+        Fibonacci story points, DAG task dependencies, capacity-validated sprints, and 5-factor developer recommendations.
+      </p>
+    </header>
+
+    <!-- Provider Configuration & Options Drawer -->
+    <section class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <strong style="color: var(--slate-900); font-size: 0.9375rem;">⚙️ AI Engine Provider &amp; Model Selection</strong>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">
+            Choose between the built-in deterministic semantic NLP engine (100% offline, explainable) or connect an external LLM API.
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <select id="ai-provider-select" class="nav-select" style="min-width: 220px;">
+            <option value="local">⚡ Built-in Explainable Semantic NLP (Recommended)</option>
+            <option value="external">🌐 External LLM API (Gemini / OpenAI / Custom)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- External API Configuration Details (Collapsible) -->
+      <div id="external-api-config-wrap" style="display: none; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+        <div class="form-row">
+          <div class="form-group" style="flex: 2;">
+            <label class="form-label" for="llm-api-key">API Key (Stored locally in your browser)</label>
+            <input type="password" id="llm-api-key" class="form-control" placeholder="Enter Gemini or OpenAI API Key...">
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label class="form-label" for="llm-endpoint-url">API Endpoint URL</label>
+            <input type="url" id="llm-endpoint-url" class="form-control" value="https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label" for="llm-model-name">Model Identifier</label>
+            <input type="text" id="llm-model-name" class="form-control" value="gemini-1.5-flash">
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <button type="button" id="btn-save-ai-settings" class="btn btn-sm btn-secondary">Save Configuration</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Generator Input Form -->
+    <section class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">📝 Project Abstract &amp; Sprint Parameters</h2>
+          <p class="card-description">
+            Enter your project specifications. Only essential fields are required; optional parameters guide the scheduling algorithms.
+          </p>
+        </div>
+      </div>
+
+      <form id="ai-generator-form">
+        <div class="form-row">
+          <div class="form-group" style="flex: 3;">
+            <label class="form-label form-label-required" for="gen-project-title">Project Title</label>
+            <input type="text" id="gen-project-title" class="form-control" placeholder="e.g. Telemedicine Consultation &amp; EHR Portal" required>
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label class="form-label" for="gen-project-stack">Preferred Technology Stack (Optional)</label>
+            <input type="text" id="gen-project-stack" class="form-control" placeholder="e.g. React, Node.js, PostgreSQL, Docker, Redis">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required" for="gen-project-abstract">Project Abstract &amp; Scope Overview</label>
+          <textarea id="gen-project-abstract" class="form-control" rows="5" placeholder="Describe the software solution, major functional modules, key user roles, security requirements, and primary workflows. The AI engine will extract objectives, functional requirements, technical dependencies, and risk factors from this abstract..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="gen-project-objectives">Key Business Objectives &amp; Success Criteria (Optional)</label>
+          <textarea id="gen-project-objectives" class="form-control" rows="2" placeholder="e.g. Deliver encrypted video consultation workflow, support 500 concurrent sessions, achieve full HIPAA compliance, reduce booking no-shows by 30%..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label form-label-required" for="gen-start-date">Project Start Date</label>
+            <input type="date" id="gen-start-date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required" for="gen-deadline">Project Target Deadline</label>
+            <input type="date" id="gen-deadline" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required" for="gen-sprint-duration">Preferred Sprint Duration</label>
+            <select id="gen-sprint-duration" class="form-control" required>
+              <option value="1">1 Week Sprints (Fast feedback cadence)</option>
+              <option value="2" selected>2 Weeks Sprints (Standard Agile default)</option>
+              <option value="3">3 Weeks Sprints (Extended feature cycles)</option>
+              <option value="4">4 Weeks Sprints (Monthly milestones)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="gen-additional-constraints">Additional Constraints &amp; Team Guidelines (Optional)</label>
+          <input type="text" id="gen-additional-constraints" class="form-control" placeholder="e.g. Prioritize database schema before UI; limit team size to 4 developers; require Docker containerization">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+          <button type="button" id="btn-clear-generator" class="btn btn-secondary">Clear Inputs</button>
+          <button type="submit" id="btn-generate-plan" class="btn btn-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-color: #4f46e5; font-size: 1rem; padding: 0.65rem 1.5rem; font-weight: 700;">
+            🚀 Analyze Abstract &amp; Generate Agile Sprints
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Generation Pipeline Indicator Card (Shown while processing) -->
+    <section id="generation-pipeline-card" class="pipeline-card" style="display: none;">
+      <h3 style="margin: 0; font-size: 1rem; color: var(--slate-900);">⚡ Automated Agile Planning Pipeline Execution</h3>
+      <div class="pipeline-steps">
+        <div id="step-1" class="pipeline-step">
+          <div class="step-num">1</div>
+          <div class="step-title">Abstract Understanding</div>
+          <div class="step-desc">Extracting modules, skills &amp; risks...</div>
+        </div>
+        <div id="step-2" class="pipeline-step">
+          <div class="step-num">2</div>
+          <div class="step-title">Task Decomposition</div>
+          <div class="step-desc">Generating Fibonacci story points &amp; DAG deps...</div>
+        </div>
+        <div id="step-3" class="pipeline-step">
+          <div class="step-num">3</div>
+          <div class="step-title">Capacity &amp; Scheduling</div>
+          <div class="step-desc">Validating sprint capacity &amp; deadline...</div>
+        </div>
+        <div id="step-4" class="pipeline-step">
+          <div class="step-num">4</div>
+          <div class="step-title">Developer Matching</div>
+          <div class="step-desc">Invoking 5-factor recommendation engine...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Review & Approval Board (Mounted dynamically after generation) -->
+    <div id="plan-review-section" style="display: none;"></div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS -->
+  <!-- ========================================================================= -->
+
+  <!-- 1. Edit Task Modal -->
+  <div id="edit-task-modal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Edit Proposed Task</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit-task-title-input">Task Title</label>
+          <input type="text" id="edit-task-title-input" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-task-desc-input">Task Description</label>
+          <textarea id="edit-task-desc-input" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="edit-task-module-input">Module</label>
+            <input type="text" id="edit-task-module-input" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-task-priority-input">Priority</label>
+            <select id="edit-task-priority-input" class="form-control">
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="edit-task-points-input">Story Points</label>
+            <select id="edit-task-points-input" class="form-control">
+              <option value="1">1 SP (~4h)</option>
+              <option value="2">2 SP (~8h)</option>
+              <option value="3">3 SP (~12h)</option>
+              <option value="5">5 SP (~18h)</option>
+              <option value="8">8 SP (~28h)</option>
+              <option value="13">13 SP (~40h)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-task-hours-input">Estimated Hours</label>
+            <input type="number" id="edit-task-hours-input" class="form-control" min="1" max="80">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-task-sprint-select">Sprint Grouping</label>
+            <select id="edit-task-sprint-select" class="form-control"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-task-skills-input">Required Skills (comma separated)</label>
+          <input type="text" id="edit-task-skills-input" class="form-control" placeholder="e.g. React, PostgreSQL, Docker">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">Cancel</button>
+        <button id="btn-save-task-edit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Add Custom Task Modal -->
+  <div id="add-task-modal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">➕ Add Custom Task to Plan</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label form-label-required" for="new-task-title-input">Task Title</label>
+          <input type="text" id="new-task-title-input" class="form-control" placeholder="e.g. Payment Gateway Webhook Handler" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="new-task-desc-input">Description</label>
+          <textarea id="new-task-desc-input" class="form-control" rows="2" placeholder="Describe the deliverable and acceptance criteria..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="new-task-module-input">Module</label>
+            <input type="text" id="new-task-module-input" class="form-control" value="Backend APIs &amp; Business Logic">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-task-priority-input">Priority</label>
+            <select id="new-task-priority-input" class="form-control">
+              <option value="High">High</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="Critical">Critical</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="new-task-points-input">Story Points</label>
+            <select id="new-task-points-input" class="form-control">
+              <option value="1">1 SP</option>
+              <option value="2">2 SP</option>
+              <option value="3" selected>3 SP</option>
+              <option value="5">5 SP</option>
+              <option value="8">8 SP</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-task-hours-input">Estimated Hours</label>
+            <input type="number" id="new-task-hours-input" class="form-control" value="12">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-task-sprint-select">Sprint</label>
+            <select id="new-task-sprint-select" class="form-control"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="new-task-skills-input">Required Skills</label>
+          <input type="text" id="new-task-skills-input" class="form-control" placeholder="e.g. Node.js, REST API, Stripe">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">Cancel</button>
+        <button id="btn-save-new-task" class="btn btn-primary">Add Task to Plan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Candidate Comparison Modal (Side-by-Side Top 3) -->
+  <div id="candidate-comparison-modal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">⚖️ Compare Top Recommended Candidates</h3>
+          <p id="comparison-task-title" style="margin: 0.25rem 0 0 0; font-size: 0.8125rem; color: var(--text-muted);"></p>
+        </div>
+        <button id="btn-close-comparison" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info" style="font-size: 0.75rem; margin-bottom: 1rem;">
+          💡 <strong>Transparent 5-Factor Scoring:</strong> Skills (40%) + Experience (20%) + Availability (20%) + Workload Balance (15%) + Historical Performance (5%).
+        </div>
+        <div id="comparison-cards-grid" class="comparison-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. PM Override Modal -->
+  <div id="pm-override-modal" class="modal">
+    <div class="modal-content" style="max-width: 550px; border-top: 4px solid var(--danger);">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" style="color: var(--danger);">⚠️ Project Manager Assignment Override</h3>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.8125rem; color: var(--text-muted);">
+            Policy exception detected. Manager authorization is required to assign this task.
+          </p>
+        </div>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="pm-override-form">
+        <div class="modal-body">
+          <div style="font-size: 0.875rem; margin-bottom: 0.5rem;">
+            Task: <strong id="override-task-title"></strong>
+          </div>
+          <div style="font-size: 0.875rem; margin-bottom: 0.75rem;">
+            Candidate: <strong id="override-dev-name"></strong>
+          </div>
+
+          <div class="alert alert-danger" style="font-size: 0.8125rem; margin-bottom: 1rem;">
+            <strong>Detected Policy Exceptions:</strong>
+            <ul id="override-policy-exceptions" style="margin: 0.35rem 0 0 0; padding-left: 1.25rem;"></ul>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label form-label-required" for="override-reason-input">PM Authorization Reason (Audited in records)</label>
+            <textarea id="override-reason-input" class="form-control" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+          <button type="submit" class="btn btn-danger">Approve Override &amp; Assign</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. Regenerate Plan Modal -->
+  <div id="regenerate-prompt-modal" class="modal">
+    <div class="modal-content" style="max-width: 550px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🔄 Regenerate Plan with Refined Instructions</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 0;">
+          Provide additional guidance for the AI engine (e.g. scope reductions, prioritized modules, or custom duration).
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="regen-custom-prompt-input">Refinement Instructions</label>
+          <textarea id="regen-custom-prompt-input" class="form-control" rows="3" placeholder="e.g. Focus on Phase 1 MVP only; combine API tasks into 2 compact sprints; prioritize security and authentication..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">Cancel</button>
+        <button class="btn btn-primary" onclick="window.aiSprintGeneratorController.confirmRegenerateWithPrompt()">
+          Regenerate Plan &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Sprint Planning &amp; Intelligent Resource Allocation System &copy; 2026</span>
+      <span>AI Planning Phase | Explainable Deterministic NLP &amp; LLM Orchestration</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/ai-sprint-generator.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.aiSprintGeneratorController.init();
+    });
+  </script>
+</body>
+</html>

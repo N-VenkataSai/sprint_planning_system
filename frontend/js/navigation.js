@@ -53,6 +53,7 @@ class NavigationManager {
     if (currentUser.role === 'admin') {
       navLinksHtml = `
         <li><a href="admin.html" class="nav-link ${activePageKey === 'admin' ? 'active' : ''}">👑 Admin Center</a></li>
+        <li><a href="ai-sprint-generator.html" class="nav-link ${activePageKey === 'ai-sprint-generator' ? 'active' : ''}">🤖 AI Sprint Generator</a></li>
         <li><a href="manager.html" class="nav-link ${activePageKey === 'manager' ? 'active' : ''}">📋 PM Backlog</a></li>
         <li><a href="sprint-planning.html" class="nav-link ${activePageKey === 'sprint-planning' ? 'active' : ''}">🎯 Sprints &amp; Allocation</a></li>
         <li><a href="developer.html" class="nav-link ${activePageKey === 'developer' ? 'active' : ''}">💻 Dev Board</a></li>
@@ -61,6 +62,7 @@ class NavigationManager {
     } else if (currentUser.role === 'manager') {
       navLinksHtml = `
         <li><a href="manager.html" class="nav-link ${activePageKey === 'manager' ? 'active' : ''}">📋 PM Dashboard</a></li>
+        <li><a href="ai-sprint-generator.html" class="nav-link ${activePageKey === 'ai-sprint-generator' ? 'active' : ''}">🤖 AI Sprint Generator</a></li>
         <li><a href="sprint-planning.html" class="nav-link ${activePageKey === 'sprint-planning' ? 'active' : ''}">🎯 Sprint Planning</a></li>
         <li><a href="developer.html" class="nav-link ${activePageKey === 'developer' ? 'active' : ''}">💻 Dev Board</a></li>
         <li><a href="create-task.html" class="nav-link ${activePageKey === 'create-task' ? 'active' : ''}">➕ New Task</a></li>

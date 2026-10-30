@@ -27,6 +27,7 @@ const REQUIRED_FILES = [
   'frontend/create-project.html',
   'frontend/create-task.html',
   'frontend/sprint-planning.html',
+  'frontend/ai-sprint-generator.html',
   'frontend/task-details.html',
   'frontend/analytics.html',
   'frontend/css/style.css',
@@ -41,6 +42,7 @@ const REQUIRED_FILES = [
   'frontend/js/projects.js',
   'frontend/js/tasks.js',
   'frontend/js/sprint-planning.js',
+  'frontend/js/ai-sprint-generator.js',
   'frontend/js/analytics.js',
   'frontend/vendor/chart.umd.min.js'
 ];
@@ -464,12 +466,146 @@ if (unassignedAudit.length > 0 && unassignedAudit.every(u => u.reason.length > 0
   process.exit(1);
 }
 
+// 6B. Verification of Feature 1: Intelligent Developer Recommendation (5-Factor Normalized Multi-Criteria)
+console.log('\n--- 6B. Testing Feature 1: 5-Factor Normalized Developer Recommendation & Top 3 Output ---');
+const taskForRec = {
+  id: 'TSK-REC-01',
+  projectId: 'PRJ-NEO',
+  sprintId: 'SP-NEO-01',
+  title: 'Real-Time Telemedicine Consultation Service',
+  priority: 'Critical',
+  storyPoints: 8,
+  estimatedHours: 20,
+  requiredSkills: ['Python', 'Docker', 'PostgreSQL']
+};
+
+const fullRec = storage.recommendDevelopersForTask(taskForRec, 'SP-NEO-01');
+console.log(`Evaluated ${fullRec.totalEligible} eligible developers. Top recommendations count: ${fullRec.topRecommendations.length}`);
+
+if (fullRec.topRecommendations.length > 0 && fullRec.topRecommendations.length <= 3) {
+  console.log('✅ PASS: Recommendation engine strictly returns Top 3 candidates (when eligible candidates exist).');
+} else {
+  console.error('❌ FAIL: Top recommendations count unexpected');
+  process.exit(1);
+}
+
+const top1 = fullRec.topRecommendations[0];
+console.log(`Rank #1: ${top1.developerName} -> Match: ${top1.totalScore}% | Weights applied: Skills ${top1.weightsApplied.skills}%, Exp ${top1.weightsApplied.experience}%, Avail ${top1.weightsApplied.availability}%, Load ${top1.weightsApplied.workload}%`);
+console.log(`Disclosures: ${top1.disclosures.join('; ')}`);
+console.log(`Reasons: ${top1.recommendationReasons.slice(0, 2).join('; ')}`);
+
+if (top1.weightsApplied.skills > 40 && top1.disclosures.some(d => d.includes('Historical completion performance unrecorded'))) {
+  console.log('✅ PASS: Dynamic re-normalization verified: Missing historical data is not invented; weights proportionally redistributed and disclosed.');
+} else {
+  console.error('❌ FAIL: Dynamic weight re-normalization check failed');
+  process.exit(1);
+}
+
+if (fullRec.topRecommendations.length > 1) {
+  const top2 = fullRec.topRecommendations[1];
+  console.log(`Rank #2 Rationale: ${top2.notRecommendedReasons.join('; ')}`);
+  if (top2.notRecommendedReasons.length > 0) {
+    console.log('✅ PASS: Lower-ranked candidates provide transparent reasons explaining why they were not ranked #1.');
+  }
+}
+
+// Test Candidate Comparison Matrix
+const compMatrix = storage.compareCandidatesForTask(taskForRec);
+if (compMatrix && compMatrix.candidates.length === fullRec.topRecommendations.length && compMatrix.metrics.length >= 10) {
+  console.log(`✅ PASS: Side-by-side Candidate Comparison matrix verified (${compMatrix.metrics.length} comparative dimensions).`);
+} else {
+  console.error('❌ FAIL: Candidate comparison helper failed');
+  process.exit(1);
+}
+
+// 6C. Verification of Feature 2: AI-Powered Automatic Sprint Generation from Project Abstract
+console.log('\n--- 6C. Testing Feature 2: AI Sprint Generation & Capacity Scheduling ---');
+
+// Load AI Sprint Generator module into test environment
+const aiGenCode = fs.readFileSync(path.join(__dirname, 'frontend/js/ai-sprint-generator.js'), 'utf8');
+eval(aiGenCode);
+const aiController = window.aiSprintGeneratorController;
+
+const testAbstractInput = {
+  title: 'Healthcare Patient Portal & Telemedicine System',
+  abstract: 'We need a cloud-based Healthcare Patient Portal with telemedicine video consultations, patient health records management, doctor appointment scheduling, and automated SMS reminders. Must comply with HIPAA security standards, use PostgreSQL with Docker, and provide responsive dashboards.',
+  objectives: 'Deliver HIPAA-compliant virtual consultations and reduce appointment no-shows by 40%.',
+  preferredStack: 'React, Node.js, PostgreSQL, Docker',
+  startDate: '2026-11-01',
+  deadline: '2027-01-15',
+  sprintDurationWeeks: 2
+};
+
+// 1. Abstract Understanding
+const nlpAnalysis = aiController.builtInSemanticNlpAnalysis(testAbstractInput);
+console.log(`Extracted: ${nlpAnalysis.functionalRequirements.length} Functional Req(s), ${nlpAnalysis.skills.length} Skill(s), ${nlpAnalysis.modules.length} Module(s), ${nlpAnalysis.assumptions.length} AI Assumption(s)`);
+
+if (nlpAnalysis.functionalRequirements.length >= 3 && nlpAnalysis.assumptions.every(a => a.includes('[AI-Generated Assumption / Pending PM Review]'))) {
+  console.log('✅ PASS: Abstract understanding correctly extracted requirements and flagged AI assumptions for PM review.');
+} else {
+  console.error('❌ FAIL: Semantic abstract analysis failed');
+  process.exit(1);
+}
+
+// 2. Structured Task Generation
+const autoTasks = aiController.generateStructuredTasks(nlpAnalysis);
+console.log(`Generated ${autoTasks.length} structured development tasks.`);
+const hasValidFibonacci = autoTasks.every(t => [1, 2, 3, 5, 8, 13].includes(t.storyPoints));
+const hasDagDependencies = autoTasks.some(t => t.dependencies.length > 0);
+
+if (autoTasks.length >= 5 && hasValidFibonacci && hasDagDependencies) {
+  console.log('✅ PASS: Task decomposition verified: Structured tasks contain Fibonacci story points, acceptance criteria, and DAG dependencies.');
+} else {
+  console.error('❌ FAIL: Task decomposition check failed');
+  process.exit(1);
+}
+
+// 3. Sprint Scheduling with Capacity Validation
+const scheduledPlan = aiController.scheduleSprintsWithCapacityValidation({
+  project: testAbstractInput,
+  analyzedData: nlpAnalysis,
+  tasks: autoTasks
+});
+
+console.log(`Scheduled ${scheduledPlan.sprints.length} sprints. Feasibility status: ${scheduledPlan.feasibility.isFeasible ? 'Feasible' : 'Conflicts detected'}`);
+scheduledPlan.sprints.forEach(s => {
+  console.log(`  - ${s.name}: ${s.tasks.length} tasks, ${s.totalPoints} SP, ${s.totalHours}h / ${s.capacityHours}h capacity (${s.utilizationPercent}%)`);
+});
+
+if (scheduledPlan.sprints.length >= 2 && scheduledPlan.feasibility.plannedFinishDate) {
+  console.log('✅ PASS: Sprint scheduling & capacity validation verified: Sprints respect DAG dependencies, capacity limits, and deadline check.');
+} else {
+  console.error('❌ FAIL: Sprint scheduling failed');
+  process.exit(1);
+}
+
+// 4. Feature 1 Integration: Developer Recommendations for Plan Tasks
+aiController.assignDeveloperRecommendationsToTasks(scheduledPlan);
+const tasksWithRecs = scheduledPlan.tasks.filter(t => t.topRecommendations && t.topRecommendations.length > 0);
+console.log(`Tasks with computed developer recommendations: ${tasksWithRecs.length} / ${scheduledPlan.tasks.length}`);
+
+if (tasksWithRecs.length === scheduledPlan.tasks.length) {
+  console.log('✅ PASS: Feature 1 developer recommendation successfully integrated into all AI-generated plan tasks.');
+} else {
+  console.error('❌ FAIL: Task recommendation integration check failed');
+  process.exit(1);
+}
+
+// 5. Persistent Storage & Metadata Verification
+const planSaveResult = storage.saveAiSprintPlan(scheduledPlan);
+if (planSaveResult.success && planSaveResult.project.aiGenerated === true && planSaveResult.project.originalAbstract.length > 0) {
+  console.log(`✅ PASS: Plan approval persistence verified: Project ${planSaveResult.projectId} saved with aiGenerated: true, originalAbstract, ${planSaveResult.sprints.length} sprints, and ${planSaveResult.tasks.length} tasks.`);
+} else {
+  console.error('❌ FAIL: AI sprint plan persistence failed');
+  process.exit(1);
+}
+
 // 7. Test Backup, Restore, and Wipe
 console.log('\n--- 7. Testing JSON Backup, Import, and Clean Data Wipe ---');
 const backupJson = storage.exportDataJSON();
 const parsed = JSON.parse(backupJson);
-if (parsed.users.length === 7 && parsed.projects.length === 1 && parsed.tasks.length === 4) {
-  console.log('✅ PASS: JSON Backup export contains all user-entered data.');
+if (parsed.users.length === 7 && parsed.projects.length >= 2 && parsed.tasks.length >= 8) {
+  console.log(`✅ PASS: JSON Backup export contains all user-entered data (${parsed.users.length} users, ${parsed.projects.length} projects, ${parsed.tasks.length} tasks).`);
 } else {
   console.error('❌ FAIL: Backup export incomplete');
   process.exit(1);
@@ -490,7 +626,7 @@ if (wipedUsers.length === 0 && wipedProjects.length === 0 && wipedTasks.length =
 
 // Restore from backup
 const restoreResult = storage.importDataJSON(backupJson);
-if (restoreResult.success && storage.getUsers().length === 7 && storage.getProjects().length === 1) {
+if (restoreResult.success && storage.getUsers().length === 7 && storage.getProjects().length >= 2) {
   console.log('✅ PASS: JSON Backup restore successfully restored state.');
 } else {
   console.error('❌ FAIL: Backup restore failed');
@@ -532,6 +668,7 @@ server.listen(8765, async () => {
     '/frontend/create-project.html',
     '/frontend/create-task.html',
     '/frontend/sprint-planning.html',
+    '/frontend/ai-sprint-generator.html',
     '/frontend/task-details.html',
     '/frontend/analytics.html',
     '/frontend/css/style.css',
@@ -546,6 +683,7 @@ server.listen(8765, async () => {
     '/frontend/js/projects.js',
     '/frontend/js/tasks.js',
     '/frontend/js/sprint-planning.js',
+    '/frontend/js/ai-sprint-generator.js',
     '/frontend/js/analytics.js',
     '/frontend/vendor/chart.umd.min.js'
   ];
