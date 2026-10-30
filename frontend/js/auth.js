@@ -4,8 +4,10 @@
  */
 
 class AuthManager {
-  constructor() {
-    this.storage = window.storageManager;
+  constructor() {}
+
+  get storage() {
+    return window.storageManager;
   }
 
   getCurrentUser() {

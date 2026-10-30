@@ -4,19 +4,28 @@
  */
 
 class NavigationManager {
-  constructor() {
-    this.storage = window.storageManager;
-    this.auth = window.authManager;
+  constructor() {}
+
+  get storage() {
+    return window.storageManager;
+  }
+
+  get auth() {
+    return window.authManager;
   }
 
   renderNavbar(activePageKey = '') {
     const navbarMount = document.getElementById('navbar-container');
     if (!navbarMount) return;
 
-    const currentUser = this.auth.getCurrentUser();
-    const allUsers = this.storage.getUsers();
-    const allProjects = this.storage.getProjects();
-    const activeProjectId = this.storage.getActiveProjectId();
+    const auth = this.auth || window.authManager;
+    const storage = this.storage || window.storageManager;
+    if (!auth || !storage) return;
+
+    const currentUser = (auth && typeof auth.getCurrentUser === 'function') ? auth.getCurrentUser() : null;
+    const allUsers = (storage && typeof storage.getUsers === 'function') ? storage.getUsers() : [];
+    const allProjects = (storage && typeof storage.getProjects === 'function') ? storage.getProjects() : [];
+    const activeProjectId = (storage && typeof storage.getActiveProjectId === 'function') ? storage.getActiveProjectId() : null;
 
     // If no user is logged in, show simple visitor header
     if (!currentUser) {

@@ -5,9 +5,15 @@
 
 class ManagerController {
   constructor() {
-    this.storage = window.storageManager;
-    this.auth = window.authManager;
     this.currentProjectId = null;
+  }
+
+  get storage() {
+    return window.storageManager;
+  }
+
+  get auth() {
+    return window.authManager;
   }
 
   init() {

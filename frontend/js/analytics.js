@@ -8,10 +8,16 @@
 
 class AnalyticsController {
   constructor() {
-    this.storage = window.storageManager;
-    this.auth = window.authManager;
     this.activeProjectId = 'ALL';
     this.charts = {};
+  }
+
+  get storage() {
+    return window.storageManager;
+  }
+
+  get auth() {
+    return window.authManager;
   }
 
   init() {

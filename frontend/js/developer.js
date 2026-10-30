@@ -5,10 +5,16 @@
 
 class DeveloperController {
   constructor() {
-    this.storage = window.storageManager;
-    this.auth = window.authManager;
     this.currentDev = null;
     this.loggingTaskId = null;
+  }
+
+  get storage() {
+    return window.storageManager;
+  }
+
+  get auth() {
+    return window.authManager;
   }
 
   init() {

@@ -5,9 +5,15 @@
 
 class TasksController {
   constructor() {
-    this.storage = window.storageManager;
-    this.auth = window.authManager;
     this.activeSkills = new Set();
+  }
+
+  get storage() {
+    return window.storageManager;
+  }
+
+  get auth() {
+    return window.authManager;
   }
 
   // ==========================================

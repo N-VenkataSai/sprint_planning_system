@@ -4,9 +4,14 @@
  */
 
 class ProjectsController {
-  constructor() {
-    this.storage = window.storageManager;
-    this.auth = window.authManager;
+  constructor() {}
+
+  get storage() {
+    return window.storageManager;
+  }
+
+  get auth() {
+    return window.authManager;
   }
 
   initCreateOrEditPage() {

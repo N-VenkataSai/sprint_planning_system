@@ -5,11 +5,17 @@
 
 class AdminController {
   constructor() {
-    this.storage = window.storageManager;
-    this.auth = window.authManager;
     this.editingUserId = null;
     this.userCurrentPage = 1;
     this.userPageSize = 10;
+  }
+
+  get storage() {
+    return window.storageManager;
+  }
+
+  get auth() {
+    return window.authManager;
   }
 
   init() {

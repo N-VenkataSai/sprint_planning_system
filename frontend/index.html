@@ -30,7 +30,7 @@
     </header>
 
     <!-- Initial Setup Container (Shown when NO Administrator is registered) -->
-    <section id="first-admin-setup-card" class="card" style="display: none; max-width: 600px; margin: 0 auto 2.5rem; border-top: 4px solid var(--purple); box-shadow: var(--shadow-lg);">
+    <section id="first-admin-setup-card" class="card" style="max-width: 600px; margin: 0 auto 2.5rem; border-top: 4px solid var(--purple); box-shadow: var(--shadow-lg);">
       <div style="text-align: center; margin-bottom: 1.25rem;">
         <span style="font-size: 2.25rem;">👑</span>
         <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--slate-900); margin-top: 0.25rem;">
@@ -183,58 +183,76 @@
 
   <!-- Scripts -->
   <script src="js/storage.js"></script>
-  <script src="js/navigation.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/navigation.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const storage = window.storageManager;
-      const auth = window.authManager;
+      try {
+        const storage = window.storageManager;
+        const auth = window.authManager;
 
-      auth.renderNavbar('login');
-
-      const allUsers = storage.getUsers();
-      const adminUsers = allUsers.filter(u => u.role === 'admin');
-      const pmUsers = allUsers.filter(u => u.role === 'manager');
-      const devUsers = allUsers.filter(u => u.role === 'developer');
-
-      const setupCard = document.getElementById('first-admin-setup-card');
-      const loginSection = document.getElementById('role-login-section');
-
-      if (adminUsers.length === 0) {
-        // First Launch: Show setup form
-        setupCard.style.display = 'block';
-        loginSection.style.display = 'none';
-      } else {
-        // Users exist: Show login role cards
-        setupCard.style.display = 'none';
-        loginSection.style.display = 'block';
-
-        // Populate Admin dropdown
-        const adminSelect = document.getElementById('admin-user-select');
-        adminSelect.innerHTML = adminUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
-
-        // Populate PM dropdown
-        const pmSelect = document.getElementById('pm-user-select');
-        if (pmUsers.length > 0) {
-          pmSelect.innerHTML = pmUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
-        } else {
-          pmSelect.innerHTML = `<option value="">No PM accounts registered yet</option>`;
-          document.getElementById('btn-enter-pm').disabled = true;
+        if (auth && typeof auth.renderNavbar === 'function') {
+          auth.renderNavbar('login');
         }
 
-        // Populate Dev dropdown
-        const devSelect = document.getElementById('dev-user-select');
-        if (devUsers.length > 0) {
-          devSelect.innerHTML = devUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+        const allUsers = (storage && typeof storage.getUsers === 'function') ? storage.getUsers() : [];
+        const adminUsers = allUsers.filter(u => u.role === 'admin');
+        const pmUsers = allUsers.filter(u => u.role === 'manager');
+        const devUsers = allUsers.filter(u => u.role === 'developer');
+
+        const setupCard = document.getElementById('first-admin-setup-card');
+        const loginSection = document.getElementById('role-login-section');
+
+        if (adminUsers.length === 0) {
+          // First Launch: Show setup form
+          if (setupCard) setupCard.style.display = 'block';
+          if (loginSection) loginSection.style.display = 'none';
         } else {
-          devSelect.innerHTML = `<option value="">No developer accounts registered yet</option>`;
-          document.getElementById('btn-enter-dev').disabled = true;
+          // Users exist: Show login role cards
+          if (setupCard) setupCard.style.display = 'none';
+          if (loginSection) loginSection.style.display = 'block';
+
+          // Populate Admin dropdown
+          const adminSelect = document.getElementById('admin-user-select');
+          if (adminSelect) {
+            adminSelect.innerHTML = adminUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+          }
+
+          // Populate PM dropdown
+          const pmSelect = document.getElementById('pm-user-select');
+          if (pmSelect) {
+            if (pmUsers.length > 0) {
+              pmSelect.innerHTML = pmUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+            } else {
+              pmSelect.innerHTML = `<option value="">No PM accounts registered yet</option>`;
+              const btnPm = document.getElementById('btn-enter-pm');
+              if (btnPm) btnPm.disabled = true;
+            }
+          }
+
+          // Populate Dev dropdown
+          const devSelect = document.getElementById('dev-user-select');
+          if (devSelect) {
+            if (devUsers.length > 0) {
+              devSelect.innerHTML = devUsers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+            } else {
+              devSelect.innerHTML = `<option value="">No developer accounts registered yet</option>`;
+              const btnDev = document.getElementById('btn-enter-dev');
+              if (btnDev) btnDev.disabled = true;
+            }
+          }
         }
+      } catch (err) {
+        console.error('Initialization error in index.html:', err);
+        const setupCard = document.getElementById('first-admin-setup-card');
+        if (setupCard) setupCard.style.display = 'block';
       }
 
       // First admin form submission
       document.getElementById('first-admin-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
+        const storage = window.storageManager;
+        const auth = window.authManager;
         const name = document.getElementById('setup-admin-name').value;
         const email = document.getElementById('setup-admin-email').value;
         const title = document.getElementById('setup-admin-title').value;
@@ -253,6 +271,7 @@
 
       // Role enter handlers
       document.getElementById('btn-enter-admin')?.addEventListener('click', () => {
+        const auth = window.authManager;
         const userId = document.getElementById('admin-user-select').value;
         if (userId && auth.login(userId)) {
           window.location.href = 'admin.html';
@@ -260,6 +279,7 @@
       });
 
       document.getElementById('btn-enter-pm')?.addEventListener('click', () => {
+        const auth = window.authManager;
         const userId = document.getElementById('pm-user-select').value;
         if (userId && auth.login(userId)) {
           window.location.href = 'manager.html';
@@ -267,6 +287,7 @@
       });
 
       document.getElementById('btn-enter-dev')?.addEventListener('click', () => {
+        const auth = window.authManager;
         const userId = document.getElementById('dev-user-select').value;
         if (userId && auth.login(userId)) {
           window.location.href = 'developer.html';
@@ -276,6 +297,8 @@
       // Direct project jump
       document.getElementById('project-jump-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
+        const storage = window.storageManager;
+        const auth = window.authManager;
         const inputId = document.getElementById('project-jump-input').value.trim().toUpperCase();
         const project = storage.getProjectById(inputId);
         if (project) {
